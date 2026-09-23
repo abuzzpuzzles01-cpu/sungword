@@ -45,7 +45,7 @@ class ExecutaVideoAtividade: UIViewController {
 
     private let btVoltar: UIButton = {
         let button = UIButton(type: .custom)
-        button.setImage(UIImage(named: "bt_voltar), for: .normal)
+        button.setImage(UIImage(named: "bt_voltar"), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
