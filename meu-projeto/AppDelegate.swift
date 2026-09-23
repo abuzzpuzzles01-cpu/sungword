@@ -4,7 +4,7 @@ import SwiftUI
 struct MeuApp: AppDelegate {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LaunchScreenViewController()
         }
     }
 }
