@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct MeuApp: AppDelegate {
-    var body: some Scene {
+    var body: some SceneDelegate {
         WindowGroup {
             LaunchScreenViewController()
         }
