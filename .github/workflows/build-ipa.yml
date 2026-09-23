@@ -30,16 +30,15 @@ jobs:
           xcrun --sdk iphoneos swiftc \
             -target arm64-apple-ios15.0 \
             -o "${{ env.BIN_NAME }}" \
-            meu-projeto/App.swift \
-            meu-projeto/HomeAtividade.swift
-            meu-projeto/ExecutaVideoAtividade.swift
-            meu-projeto/SceneDelegate.swift
-            meu-projeto/InstitucionalAtividade.swift
-            meu-projeto/PersonagensAtividade.swift
-            meu-projeto/LaunchScreenViewController.swift
-            meu-projeto/Song.swift
-            meu-projeto/SobreAtividade.swift
-            meu-projeto/VideoDownloadManager.swift
+            ${{ env.PROJECT_NAME }}/App.swift \
+            ${{ env.PROJECT_NAME }}/AppDelegate.swift \
+            ${{ env.PROJECT_NAME }}/SceneDelegate.swift \
+            ${{ env.PROJECT_NAME }}/HomeAtividade.swift \
+            ${{ env.PROJECT_NAME }}/Song.swift \
+            ${{ env.PROJECT_NAME }}/LaunchScreenViewController.swift \
+            ${{ env.PROJECT_NAME }}/ExecutaVideoAtividade.swift \
+            ${{ env.PROJECT_NAME }}/InstitucionalAtividade.swift \
+            ${{ env.PROJECT_NAME }}/VideoDownloadManager.swift
           echo "✅ Binário compilado com sucesso!"
 
       - name: Montar Estrutura do Aplicativo (.app) e Injetar Recursos Estáticos
@@ -50,14 +49,18 @@ jobs:
           
           # Copia os ícones e as telas de carregamento do app
           echo "🖼️ Copiando ícones e telas de carregamento do app..."
-          cp "meu-projeto/icone_60@2x.png" "Payload/${{ env.BIN_NAME }}.app/"
-          cp "meu-projeto/icone_76@2x~ipad.png" "Payload/${{ env.BIN_NAME }}.app/"
+          if [ -f "${{ env.PROJECT_NAME }}/icone_60@2x.png" ]; then
+            cp "${{ env.PROJECT_NAME }}/icone_60@2x.png" "Payload/${{ env.BIN_NAME }}.app/"
+          fi
+          if [ -f "${{ env.PROJECT_NAME }}/icone_76@2x~ipad.png" ]; then
+            cp "${{ env.PROJECT_NAME }}/icone_76@2x~ipad.png" "Payload/${{ env.BIN_NAME }}.app/"
+          fi
 
-          if [ -f "meu-projeto/bg_splash.png" ]; then
-            cp "meu-projeto/bg_splash.png" "Payload/${{ env.BIN_NAME }}.app/"
+          if [ -f "${{ env.PROJECT_NAME }}/bg_splash.png" ]; then
+            cp "${{ env.PROJECT_NAME }}/bg_splash.png" "Payload/${{ env.BIN_NAME }}.app/"
           fi
           
-          for launch in meu-projeto/bg_splash*.png; do
+          for launch in ${{ env.PROJECT_NAME }}/bg_splasu*.png; do
             if [ -f "$launch" ] && [ "$(basename "$launch")" != "bg_splash.png" ]; then
               cp "$launch" "Payload/${{ env.BIN_NAME }}.app/"
             fi
@@ -82,9 +85,9 @@ jobs:
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
-              <string>1.0.0</string>
+              <string>1.0</string>
               <key>CFBundleVersion</key>
-              <string>100</string>
+              <string>2026.0912</string>
               <key>MinimumOSVersion</key>
               <string>15.0</string>
               
@@ -98,11 +101,11 @@ jobs:
               <key>UILaunchImageFile</key>
               <string>bg_splash</string>
               
-             <key>CFBundleIconFiles</key>
-            <array>
-           <string>icone_60@2x.png</string>
-           <string>icons_76@2x~ipad.png</string>
-           </array>
+              <key>CFBundleIconFiles</key>
+              <array>
+                  <string>icone_60@2x.png</string>
+                  <string>icone_76@2x~ipad.png</string>
+              </array>
 
               <key>UISupportedInterfaceOrientations</key>
               <array>
