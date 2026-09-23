@@ -1,0 +1,129 @@
+name: Build TrollStore IPA (Design Minimalista)
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  PROJECT_NAME: "meu-projeto"
+  BIN_NAME: "tres_palavrinhas"
+  CUSTOM_BUNDLE_ID: "br.com.emotiondigital.trespalavrinhas"
+  CUSTOM_DISPLAY_NAME: "3 Palavrinhas" 
+
+jobs:
+  build-trollstore:
+    name: Compilação Direta via Swift CLI
+    runs-on: macos-14
+
+    steps:
+      - name: Clonar Repositório
+        uses: actions/checkout@v4
+
+      - name: Selecionar Xcode do Sistema
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Compilar Binário Swift para iOS ARM64
+        run: |
+          echo "🚀 Compilando os arquivos de código Swift diretamente..."
+          xcrun --sdk iphoneos swiftc \
+            -target arm64-apple-ios15.0 \
+            -o "${{ env.BIN_NAME }}" \
+            meu-projeto/App.swift \
+            meu-projeto/HomeAtividade.swift
+            meu-projeto/ExecutaVideoAtividade.swift
+            meu-projeto/SceneDelegate.swift
+            meu-projeto/InstitucionalAtividade.swift
+            meu-projeto/PersonagensAtividade.swift
+            meu-projeto/LaunchScreenViewController.swift
+            meu-projeto/Song.swift
+            meu-projeto/SobreAtividade.swift
+            meu-projeto/VideoDownloadManager.swift
+          echo "✅ Binário compilado com sucesso!"
+
+      - name: Montar Estrutura do Aplicativo (.app) e Injetar Recursos Estáticos
+        run: |
+          echo "📦 Montando a estrutura interna do aplicativo iOS..."
+          mkdir -p Payload/${{ env.BIN_NAME }}.app
+          mv "${{ env.BIN_NAME }}" "Payload/${{ env.BIN_NAME }}.app/${{ env.BIN_NAME }}"
+          
+          # Copia os ícones e as telas de carregamento do app
+          echo "🖼️ Copiando ícones e telas de carregamento do app..."
+          cp "meu-projeto/icone_60@2x.png" "Payload/${{ env.BIN_NAME }}.app/"
+          cp "meu-projeto/icone_76@2x~ipad.png" "Payload/${{ env.BIN_NAME }}.app/"
+
+          if [ -f "meu-projeto/bg_splash.png" ]; then
+            cp "meu-projeto/bg_splash.png" "Payload/${{ env.BIN_NAME }}.app/"
+          fi
+          
+          for launch in meu-projeto/bg_splash*.png; do
+            if [ -f "$launch" ] && [ "$(basename "$launch")" != "bg_splash.png" ]; then
+              cp "$launch" "Payload/${{ env.BIN_NAME }}.app/"
+            fi
+          done
+
+      - name: Gerar e Injetar Info.plist Adaptado
+        run: |
+          echo "📝 Criando arquivo de propriedades..."
+          cat <<EOF > Payload/${{ env.BIN_NAME }}.app/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleIdentifier</key>
+              <string>${{ env.CUSTOM_BUNDLE_ID }}</string>
+              <key>CFBundleDisplayName</key>
+              <string>${{ env.CUSTOM_DISPLAY_NAME }}</string>
+              <key>CFBundleExecutable</key>
+              <string>${{ env.BIN_NAME }}</string>
+              <key>CFBundleName</key>
+              <string>${{ env.BIN_NAME }}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0.0</string>
+              <key>CFBundleVersion</key>
+              <string>100</string>
+              <key>MinimumOSVersion</key>
+              <string>15.0</string>
+              
+              <key>CFBundleDevelopmentRegion</key>
+              <string>pt</string>
+              <key>CFBundleLocalizations</key>
+              <array>
+                  <string>pt</string>
+              </array>
+              
+              <key>UILaunchImageFile</key>
+              <string>bg_splash</string>
+              
+             <key>CFBundleIconFiles</key>
+            <array>
+           <string>icone_60@2x.png</string>
+           <string>icons_76@2x~ipad.png</string>
+           </array>
+
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationLandscapeLeft</string>
+                  <string>UIInterfaceOrientationLandscapeRight</string>
+              </array>
+              <key>UISupportedInterfaceOrientations~ipad</key>
+              <array>
+                  <string>UIInterfaceOrientationLandscapeLeft</string>
+                  <string>UIInterfaceOrientationLandscapeRight</string>
+              </array>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Compactar em Arquivo .ipa para TrollStore
+        run: |
+          zip -r "${{ env.BIN_NAME }}.ipa" Payload
+
+      - name: Salvar Artefato IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollStore-Final-IPA
+          path: "*.ipa"
