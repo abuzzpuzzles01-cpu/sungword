@@ -4,22 +4,21 @@ import AVFoundation
 
 class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
-    // MARK: - Audio Player
     private var audioPlayer: AVAudioPlayer?
-
-    // MARK: - Properties
     private var contents: [Song] = []
     private var products: [Album] = []
 
-    // MARK: - UI Components
+    // MARK: - Componentes de Interface
+
     private let backgroundImageView: UIImageView = {
         let imageView = UIImageView()
         if let image = UIImage(named: "bg_home.png") ?? UIImage(named: "bg_home") {
             imageView.image = image
         } else {
-            imageView.backgroundColor = UIColor(red: 0.1, green: 0.5, blue: 0.9, alpha: 1.0)
+            imageView.backgroundColor = UIColor(red: 0.1, green: 0.6, blue: 0.9, alpha: 1.0)
         }
         imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -55,19 +54,26 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         return cv
     }()
 
-    // MARK: - LoadView (Garante a criação da View base do UIKit)
+    // MARK: - LifeCycle
+
     override func loadView() {
-        let customView = UIView(frame: UIScreen.main.bounds)
-        customView.backgroundColor = .systemBlue // Cor base visível caso as imagens falhem
-        self.view = customView
+        // Força a alocação da view principal com o frame da tela para não iniciar em (0,0,0,0)
+        let mainView = UIView(frame: UIScreen.main.bounds)
+        mainView.backgroundColor = .systemYellow // Cor de contraste visível caso falhe a imagem
+        self.view = mainView
     }
 
-    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         loadData()
         playBackgroundAudio()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Garante a re-renderização caso as constraints estejam pendentes
+        view.layoutIfNeeded()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -86,9 +92,41 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         return true
     }
 
-    // MARK: - Sound Function
+    // MARK: - Setup Layout & Constraints
+
+    private func setupUI() {
+        view.addSubview(backgroundImageView)
+        view.addSubview(btSobre)
+        view.addSubview(collectionView)
+
+        NSLayoutConstraint.activate([
+            // Background preenchendo as bordas da tela
+            backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            backgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+            // Botão Sobre
+            btSobre.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            btSobre.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            btSobre.widthAnchor.constraint(equalToConstant: 60),
+            btSobre.heightAnchor.constraint(equalToConstant: 44),
+
+            // CollectionView centralizada na parte inferior
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            collectionView.heightAnchor.constraint(equalToConstant: 150)
+        ])
+    }
+
+    // MARK: - Audio Player
+
     private func playBackgroundAudio() {
-        guard let url = Bundle.main.url(forResource: "o_sabao", withExtension: "mp3") else { return }
+        guard let url = Bundle.main.url(forResource: "o_sabao", withExtension: "mp3") else {
+            print("⚠️ Arquivo de áudio não encontrado no Bundle.")
+            return
+        }
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
@@ -99,35 +137,12 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
         } catch {
-            print("❌ Erro ao reproduzir áudio: \(error.localizedDescription)")
+            print("⚠️ Erro no AVAudioPlayer: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - Setup UI
-    private func setupUI() {
-        view.addSubview(backgroundImageView)
-        view.addSubview(btSobre)
-        view.addSubview(collectionView)
+    // MARK: - Data & Actions
 
-        NSLayoutConstraint.activate([
-            backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
-            backgroundImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            backgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            backgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            btSobre.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            btSobre.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            btSobre.widthAnchor.constraint(equalToConstant: 60),
-            btSobre.heightAnchor.constraint(equalToConstant: 44),
-
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-            collectionView.heightAnchor.constraint(equalToConstant: 160)
-        ])
-    }
-
-    // MARK: - Data Handling
     private func loadData() {
         self.products = getProducts()
         if !products.isEmpty {
@@ -146,7 +161,8 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         }
     }
 
-    // MARK: - UICollectionView DataSource & Delegate
+    // MARK: - UICollectionView Data Source / Delegate
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return contents.count
     }
@@ -161,7 +177,7 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
     }
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: 180, height: 140)
+        return CGSize(width: 160, height: 130)
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -170,6 +186,7 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
     }
 
     // MARK: - HomeAtividadeDelegate Protocol
+
     func loadVideo(content: Song, position: Int) {
         let downloadPath = content.isDownloaded() ? content.getLocalVideoMP4URL().path : (content.getDownloadURL()?.absoluteString ?? "")
 
