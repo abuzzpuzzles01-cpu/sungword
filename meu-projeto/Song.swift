@@ -27,7 +27,12 @@ public struct Song: Codable {
     
     // MARK: - Download & Local Storage Methods
     
-    /// Retorna a URL remota de onde o vídeo deve ser baixado/transmitido
+    /// Propriedade computada em String para compatibilidade com o ExecutaVideoAtividade
+    public var downloadUrl: String? {
+        return getDownloadURL()?.absoluteString
+    }
+    
+    /// Retorna a URL remota (URL) de onde o vídeo deve ser baixado/transmitido
     public func getDownloadURL() -> URL? {
         guard let rawId = getFileName() else { return nil }
         let cleanId = (rawId as NSString).deletingPathExtension
