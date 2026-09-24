@@ -1,12 +1,6 @@
 import UIKit
 import AVKit
 
-// Model para representar a estrutura de dados de Song/Música
-struct Song {
-    var fileName: String
-    var urlDownload: String?
-}
-
 class ExecutaVideoAtividade: UIViewController {
 
     // MARK: - Properties & Data
