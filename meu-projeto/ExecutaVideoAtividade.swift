@@ -3,10 +3,16 @@ import AVKit
 
 class ExecutaVideoAtividade: UIViewController {
 
-    // MARK: - Properties & Data
-    var currentContentIndex: Int = 0
-    var playList: [Song] = []
-    
+    // Propriedades acessadas pela HomeAtividade
+    var downloadUrl: String?
+    var currentIndex: Int = 0
+    var playlist: [Song] = []
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    }
+}
+
     private var player: AVPlayer?
     private var playerItem: AVPlayerItem?
     private var timeObserverToken: Any?
