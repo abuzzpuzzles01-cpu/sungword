@@ -31,6 +31,7 @@ jobs:
             -target arm64-apple-ios15.0 \
             -o "${{ env.BIN_NAME }}" \
             ${{ env.PROJECT_NAME }}/App.swift \
+            ${{ env.PROJECT_NAME }}/Album.swift \
             ${{ env.PROJECT_NAME }}/AppDelegate.swift \
             ${{ env.PROJECT_NAME }}/SceneDelegate.swift \
             ${{ env.PROJECT_NAME }}/HomeAtividade.swift \
