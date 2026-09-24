@@ -1,3 +1,4 @@
+// Song.swift
 import Foundation
 
 public class Song: NSObject, Codable, NSSecureCoding {
@@ -22,6 +23,18 @@ public class Song: NSObject, Codable, NSSecureCoding {
     public var productIdentifier: String?
     public var songName: String?
     public var source: String?
+
+    // MARK: - Computed Properties para compatibilidade com a HomeAtividade
+    public var name: String? {
+        return songName
+    }
+
+    public var downloadUrl: String? {
+        if isDownloaded() {
+            return getLocalVideoMP4URL().path
+        }
+        return getDownloadURL()?.absoluteString
+    }
 
     // MARK: - CodingKeys
     private enum CodingKeys: String, CodingKey {
