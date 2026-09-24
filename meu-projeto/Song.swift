@@ -1,12 +1,22 @@
 import Foundation
 
-public struct Song {
+// Adicione : Codable na struct
+public struct Song: Codable {
     public let id: String
     public let title: String
     public let fileName: String?
     
     // URL Base para download/streaming dos vídeos
     private let baseURL = "https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas"
+    
+    // MARK: - CodingKeys
+    // Define quais propriedades devem ser serializadas pelo Codable
+    // (Exclui baseURL já que ela é fixa/constante)
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case fileName
+    }
     
     public init(id: String, title: String, fileName: String?) {
         self.id = id
@@ -23,7 +33,6 @@ public struct Song {
         guard let rawId = getFileName() else { return nil }
         let cleanId = (rawId as NSString).deletingPathExtension
         
-        // Retorna a URL completa no formato: https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas/nome_do_video.mp4
         let urlString = "\(baseURL)/\(cleanId).mp4"
         return URL(string: urlString)
     }
