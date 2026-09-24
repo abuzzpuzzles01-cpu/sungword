@@ -2,27 +2,31 @@
 import UIKit
 import AVFoundation
 
-// MARK: - Protocolo Delegate
 protocol HomeAtividadeDelegate: AnyObject {
     func loadVideo(content: Song, position: Int)
     func startDownload(pos: Int, content: Song)
+    func downloadColection(products: [Album])
+    func downloadAlbum(product: Album)
+    func downloadItem(content: Song)
 }
 
-// MARK: - Classe Principal (Similar à HomeActivity em Java/Android)
-class HomeAtividade: UIViewController, HomeAtividadeDelegate {
+class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
-    // MARK: - Audio Player (AVAudioPlayer)
-    // Gerencia a reprodução do áudio de fundo.
+    // MARK: - Audio Player
     private var audioPlayer: AVAudioPlayer?
 
+    // MARK: - Properties
+    private var contents: [Song] = []
+    private var products: [Album] = []
+    private var selectedAlbumIndex: Int = 0
+
     // MARK: - UI Components
-    // Definição dos componentes da interface (ex: botões, imagens de fundo).
     private let backgroundImageView: UIImageView = {
         let imageView = UIImageView()
-        if let image = UIImage(named: "bg_home") {
+        if let image = UIImage(named: "bg_home.png") ?? UIImage(named: "bg_home") {
             imageView.image = image
         } else {
-            imageView.backgroundColor = .systemBlue // Fallback caso a imagem não exista
+            imageView.backgroundColor = UIColor(red: 0.1, green: 0.5, blue: 0.9, alpha: 1.0)
         }
         imageView.contentMode = .scaleAspectFill
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -31,146 +35,162 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate {
 
     private lazy var btSobre: UIButton = {
         let button = UIButton(type: .custom)
-        if let image = UIImage(named: "bt_sobre") {
+        if let image = UIImage(named: "bt_sobre.png") ?? UIImage(named: "bt_sobre") {
             button.setImage(image, for: .normal)
         } else {
             button.setTitle("Sobre", for: .normal)
             button.setTitleColor(.white, for: .normal)
+            button.backgroundColor = .systemOrange
+            button.layer.cornerRadius = 8
         }
         button.addTarget(self, action: #selector(sobreButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    // MARK: - Properties (Variáveis de Estado)
-    private var contents: [Song] = []
-    private var products: [Album] = []
-    private var selectedAlbumIndex: Int = 0
+    // UICollectionView para listagem dos vídeos em formato de carrossel
+    private lazy var collectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 16
+        layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.backgroundColor = .clear
+        cv.showsHorizontalScrollIndicator = false
+        cv.register(VideoCell.self, forCellWithReuseIdentifier: VideoCell.identifier)
+        cv.dataSource = self
+        cv.delegate = self
+        cv.translatesAutoresizingMaskIntoConstraints = false
+        return cv
+    }()
 
-    // MARK: - Lifecycle (Ciclo de Vida - Similar ao onCreate/onStart/onStop do Android)
-
-    // viewDidLoad: Chamado uma vez quando a view é carregada na memória (Similar ao onCreate).
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         loadData()
-        playBackgroundAudio() // Inicia o som ao carregar a tela
+        playBackgroundAudio()
     }
 
-    // viewWillAppear: Chamado sempre que a view está prestes a ficar visível (Similar ao onStart).
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Resume o som ao voltar para a Home (vinda de outra tela que pausou o som)
         if let player = audioPlayer, !player.isPlaying {
             player.play()
         }
     }
 
-    // viewWillDisappear: Chamado quando a view está prestes a ser removida da tela (Similar ao onStop).
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        // Pausa o som para não sobrepor com vídeos ou sons de outras telas
         audioPlayer?.pause()
     }
 
-    // Configuração para ocultar a barra de status (tela cheia).
     override var prefersStatusBarHidden: Bool {
         return true
     }
 
-    // MARK: - Sound Function (Função de Áudio)
-    // Configura e reproduz o arquivo o_sabao.mp3 em loop.
+    // MARK: - Sound Function
     private func playBackgroundAudio() {
-        // 1. Localiza o arquivo o_sabao.mp3 no Bundle principal do aplicativo.
         guard let url = Bundle.main.url(forResource: "o_sabao", withExtension: "mp3") else {
-            print("❌ Erro: Arquivo o_sabao.mp3 não encontrado no Bundle do aplicativo.")
+            print("❌ Erro: o_sabao.mp3 não encontrado no Bundle.")
             return
         }
 
         do {
-            // 2. Configura a sessão de áudio do iOS para reprodução (playback).
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
 
-            // 3. Inicializa o AVAudioPlayer com a URL do arquivo.
             audioPlayer = try AVAudioPlayer(contentsOf: url)
-            
-            // 4. Define o número de loops. -1 significa loop infinito.
             audioPlayer?.numberOfLoops = -1
-            
-            // 5. Prepara o player e inicia a reprodução.
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
-            print("🎵 Reproduzindo o_sabao.mp3 com sucesso em loop contínuo!")
         } catch {
-            print("❌ Erro ao inicializar ou reproduzir o player de áudio: \(error.localizedDescription)")
+            print("❌ Erro ao inicializar o player de áudio: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - Setup UI (Configuração da Interface)
+    // MARK: - Setup UI
     private func setupUI() {
         view.backgroundColor = .black
 
-        // Adiciona os componentes na hierarquia de views.
         view.addSubview(backgroundImageView)
         view.addSubview(btSobre)
+        view.addSubview(collectionView)
 
-        // Garante que a imagem de fundo fique atrás dos botões.
-        view.sendSubviewToBack(backgroundImageView)
-
-        // Define as Constraints (Auto Layout) para posicionar os elementos.
         NSLayoutConstraint.activate([
-            // Fundo ocupa 100% da tela
+            // Fundo
             backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
             backgroundImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             backgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             backgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
-            // Botão Sobre (Canto superior esquerdo, respeitando a Safe Area)
+            // Botão Sobre
             btSobre.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             btSobre.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            btSobre.widthAnchor.constraint(equalToConstant: 44),
-            btSobre.heightAnchor.constraint(equalToConstant: 44)
+            btSobre.widthAnchor.constraint(equalToConstant: 60),
+            btSobre.heightAnchor.constraint(equalToConstant: 44),
+
+            // Carrossel de Vídeos (Centralizado na metade inferior)
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            collectionView.heightAnchor.constraint(equalToConstant: 160)
         ])
     }
 
-    // MARK: - Data Handling (Manipulação de Dados)
+    // MARK: - Data Handling
     private func loadData() {
-        // Carrega a lista de álbuns (Mocada ou vinda de uma API).
         self.products = getProducts()
-        
         if !products.isEmpty {
-            // Correção do erro opcional: Usa ?? [] para garantir que contents receba um array vazio caso songs seja nil.
             self.contents = products[0].songs ?? []
         }
+        collectionView.reloadData()
     }
 
-    // MARK: - Actions (Ações de Botões)
+    // MARK: - Actions
     @objc private func sobreButtonTapped() {
-        // Linha 279: Navegação para a SobreAtividade.
-        // Certifique-se de que o arquivo SobreAtividade.swift existe e está compilado.
         let sobreVC = SobreAtividade()
         if let nav = navigationController {
-            // Se houver um NavigationController, faz o push da nova tela.
             nav.pushViewController(sobreVC, animated: true)
         } else {
-            // Caso contrário, apresenta a tela de forma modal (full screen).
             sobreVC.modalPresentationStyle = .fullScreen
             present(sobreVC, animated: true, completion: nil)
         }
     }
 
-    // MARK: - HomeAtividadeDelegate Protocol Implementation
-    // Implementação dos métodos do protocolo definido no início do arquivo.
+    // MARK: - UICollectionView DataSource & Delegate
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return contents.count
+    }
 
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: VideoCell.identifier, for: indexPath) as? VideoCell else {
+            return UICollectionViewCell()
+        }
+        let song = contents[indexPath.item]
+        cell.configure(with: song)
+        return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        return CGSize(width: 180, height: 140)
+    }
+
+    // Clique no vídeo -> Executa a ExecutaVideoAtividade
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let selectedSong = contents[indexPath.item]
+        loadVideo(content: selectedSong, position: indexPath.item)
+    }
+
+    // MARK: - HomeAtividadeDelegate Implementation
     func loadVideo(content: Song, position: Int) {
-        guard let downloadPath = content.downloadUrl else { return }
-        
-        // Pausa o som de fundo explicitamente antes de iniciar o player de vídeo.
+        let downloadPath = content.isDownloaded() ? content.getLocalVideoMP4URL().path : (content.getDownloadURL()?.absoluteString ?? "")
+
+        // Pausa a música de fundo
         audioPlayer?.pause()
 
+        // Abre o player de vídeo
         let executaVC = ExecutaVideoAtividade()
-        // Passa os dados necessários para a controller de vídeo.
         executaVC.downloadUrl = downloadPath
         executaVC.currentIndex = position
         executaVC.playlist = self.contents
@@ -183,16 +203,68 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate {
         }
     }
 
-    func startDownload(pos: Int, content: Song) {
-        // Lógica para iniciar o download do vídeo usando o VideoDownloadManager.
-        // Após o sucesso do download, chamaria o loadVideo().
-        print("Iniciando download do vídeo: \(content.name ?? "") na posição \(pos)")
+    func startDownload(pos: Int, content: Song) {}
+    func downloadColection(products: [Album]) {}
+    func downloadAlbum(product: Album) {}
+    func downloadItem(content: Song) {}
+
+    private func getProducts() -> [Album] {
+        return self.products
+    }
+}
+
+// MARK: - Cell Customizada para renderizar a miniatura do vídeo
+class VideoCell: UICollectionViewCell {
+    static let identifier = "VideoCell"
+
+    private let imageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 12
+        iv.backgroundColor = .darkGray
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .white
+        label.font = UIFont.boldSystemFont(ofSize: 12)
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        contentView.addSubview(imageView)
+        contentView.addSubview(titleLabel)
+
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            imageView.heightAnchor.constraint(equalToConstant: 100),
+
+            titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 4),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        ])
     }
 
-    // MARK: - Mock Products Data (Dados de Exemplo)
-    // Função auxiliar para retornar uma lista de álbuns vazia ou mocada para teste.
-    private func getProducts() -> [Album] {
-        // Retorne sua lista real de álbuns aqui.
-        return []
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) não foi implementado")
+    }
+
+    func configure(with song: Song) {
+        titleLabel.text = song.songName ?? "Vídeo"
+        if let thumbName = song.getThumb(), let image = UIImage(named: thumbName) {
+            imageView.image = image
+        } else {
+            imageView.image = UIImage(named: "bg_splash.png")
+        }
     }
 }
