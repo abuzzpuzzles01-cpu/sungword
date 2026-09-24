@@ -27,7 +27,7 @@ class VideoCell: UICollectionViewCell {
 
     private let playIconImageView: UIImageView = {
         let iv = UIImageView()
-        if let playImage = UIImage(named: "ic_play") ?? UIImage(systemName: "play.circle.fill") {
+        if let playImage = UIImage(named: "play_button") ?? UIImage(systemName: "play.circle.fill") {
             iv.image = playImage
         }
         iv.tintColor = .white
