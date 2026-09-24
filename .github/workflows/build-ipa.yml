@@ -69,6 +69,13 @@ jobs:
             fi
           done
 
+          # Copia todos os arquivos de mídia (áudios, vídeos e imagens PNG)
+          echo "🎵 🎥 🖼️ Copiando todos os áudios (.mp3), vídeos (.mp4) e imagens (.png)..."
+          find "${{ env.PROJECT_NAME }}" -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.png" \) -exec cp {} "Payload/${{ env.BIN_NAME }}.app/" \;
+
+          echo "✅ Todos os recursos de mídia foram injetados com sucesso na pasta Payload/${{ env.BIN_NAME }}.app"
+
+
       - name: Gerar e Injetar Info.plist Adaptado
         run: |
           echo "📝 Criando arquivo de propriedades..."
