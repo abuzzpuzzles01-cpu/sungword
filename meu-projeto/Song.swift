@@ -39,7 +39,15 @@ public struct Song: Codable {
         return URL(string: "\(baseURL)/\(cleanId).mp4")
     }
     
-    /// Retorna o caminho do arquivo local na pasta Documents do app
+    /// Retorna o caminho do arquivo .zip local na pasta Documents
+    public func getLocalZipURL() -> URL {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
+        return documentsURL.appendingPathComponent("\(cleanId).zip")
+    }
+    
+    /// Retorna o caminho do arquivo .mp4 local na pasta Documents
     public func getLocalVideoMP4URL() -> URL {
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
