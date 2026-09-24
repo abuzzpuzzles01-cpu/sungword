@@ -21,13 +21,20 @@ public struct Song: Codable {
         self.fileName = fileName
     }
     
+    // MARK: - Legacy / Compatibility Properties
+    
+    /// Propriedade computada para manter compatibilidade com VideoCell
+    public var songName: String? {
+        return title
+    }
+    
     public func getFileName() -> String? {
         return fileName
     }
     
     // MARK: - Download & Local Storage Methods
     
-    /// Propriedade computada em String para compatibilidade com o ExecutaVideoAtividade
+    /// Propriedade computada em String para compatibilidade com ExecutaVideoAtividade
     public var downloadUrl: String? {
         return getDownloadURL()?.absoluteString
     }
