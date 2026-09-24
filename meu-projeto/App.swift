@@ -5,7 +5,7 @@ import SwiftUI
 struct MeuProjetoApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeAtividade()
         }
     }
 }
