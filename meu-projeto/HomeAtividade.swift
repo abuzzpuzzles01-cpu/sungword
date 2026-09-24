@@ -2,14 +2,6 @@
 import UIKit
 import AVFoundation
 
-protocol HomeAtividadeDelegate: AnyObject {
-    func loadVideo(content: Song, position: Int)
-    func startDownload(pos: Int, content: Song)
-    func downloadColection(products: [Album])
-    func downloadAlbum(product: Album)
-    func downloadItem(content: Song)
-}
-
 class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
     // MARK: - Audio Player
@@ -18,7 +10,6 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
     // MARK: - Properties
     private var contents: [Song] = []
     private var products: [Album] = []
-    private var selectedAlbumIndex: Int = 0
 
     // MARK: - UI Components
     private let backgroundImageView: UIImageView = {
@@ -48,7 +39,6 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         return button
     }()
 
-    // UICollectionView para listagem dos vídeos em formato de carrossel
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -64,6 +54,13 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         cv.translatesAutoresizingMaskIntoConstraints = false
         return cv
     }()
+
+    // MARK: - LoadView (Garante a criação da View base do UIKit)
+    override func loadView() {
+        let customView = UIView(frame: UIScreen.main.bounds)
+        customView.backgroundColor = .systemBlue // Cor base visível caso as imagens falhem
+        self.view = customView
+    }
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -91,10 +88,7 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
 
     // MARK: - Sound Function
     private func playBackgroundAudio() {
-        guard let url = Bundle.main.url(forResource: "o_sabao", withExtension: "mp3") else {
-            print("❌ Erro: o_sabao.mp3 não encontrado no Bundle.")
-            return
-        }
+        guard let url = Bundle.main.url(forResource: "o_sabao", withExtension: "mp3") else { return }
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
@@ -105,32 +99,27 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
         } catch {
-            print("❌ Erro ao inicializar o player de áudio: \(error.localizedDescription)")
+            print("❌ Erro ao reproduzir áudio: \(error.localizedDescription)")
         }
     }
 
     // MARK: - Setup UI
     private func setupUI() {
-        view.backgroundColor = .black
-
         view.addSubview(backgroundImageView)
         view.addSubview(btSobre)
         view.addSubview(collectionView)
 
         NSLayoutConstraint.activate([
-            // Fundo
             backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
             backgroundImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             backgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             backgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
-            // Botão Sobre
             btSobre.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             btSobre.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             btSobre.widthAnchor.constraint(equalToConstant: 60),
             btSobre.heightAnchor.constraint(equalToConstant: 44),
 
-            // Carrossel de Vídeos (Centralizado na metade inferior)
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
@@ -147,7 +136,6 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         collectionView.reloadData()
     }
 
-    // MARK: - Actions
     @objc private func sobreButtonTapped() {
         let sobreVC = SobreAtividade()
         if let nav = navigationController {
@@ -176,20 +164,17 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
         return CGSize(width: 180, height: 140)
     }
 
-    // Clique no vídeo -> Executa a ExecutaVideoAtividade
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let selectedSong = contents[indexPath.item]
         loadVideo(content: selectedSong, position: indexPath.item)
     }
 
-    // MARK: - HomeAtividadeDelegate Implementation
+    // MARK: - HomeAtividadeDelegate Protocol
     func loadVideo(content: Song, position: Int) {
         let downloadPath = content.isDownloaded() ? content.getLocalVideoMP4URL().path : (content.getDownloadURL()?.absoluteString ?? "")
 
-        // Pausa a música de fundo
         audioPlayer?.pause()
 
-        // Abre o player de vídeo
         let executaVC = ExecutaVideoAtividade()
         executaVC.downloadUrl = downloadPath
         executaVC.currentIndex = position
@@ -210,61 +195,5 @@ class HomeAtividade: UIViewController, HomeAtividadeDelegate, UICollectionViewDa
 
     private func getProducts() -> [Album] {
         return self.products
-    }
-}
-
-// MARK: - Cell Customizada para renderizar a miniatura do vídeo
-class VideoCell: UICollectionViewCell {
-    static let identifier = "VideoCell"
-
-    private let imageView: UIImageView = {
-        let iv = UIImageView()
-        iv.contentMode = .scaleAspectFill
-        iv.clipsToBounds = true
-        iv.layer.cornerRadius = 12
-        iv.backgroundColor = .darkGray
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
-
-    private let titleLabel: UILabel = {
-        let label = UILabel()
-        label.textColor = .white
-        label.font = UIFont.boldSystemFont(ofSize: 12)
-        label.textAlignment = .center
-        label.numberOfLines = 2
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        contentView.addSubview(imageView)
-        contentView.addSubview(titleLabel)
-
-        NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            imageView.heightAnchor.constraint(equalToConstant: 100),
-
-            titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 4),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-        ])
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) não foi implementado")
-    }
-
-    func configure(with song: Song) {
-        titleLabel.text = song.songName ?? "Vídeo"
-        if let thumbName = song.getThumb(), let image = UIImage(named: thumbName) {
-            imageView.image = image
-        } else {
-            imageView.image = UIImage(named: "bg_splash.png")
-        }
     }
 }
