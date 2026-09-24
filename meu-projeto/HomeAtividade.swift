@@ -151,7 +151,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
     private func carregaVideos() {
         guard !products.isEmpty else { return }
         selectedDvdIndex = 0
-        self.contents = products[0].songs
+        self.contents = products[0].songs ?? []
         self.backgroundImage.image = UIImage(named: "background")
         self.collectionViewVideos.reloadData()
     }
@@ -163,7 +163,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
         animarSelecaoAba(dvdSelecionado: btDvd1)
         backgroundImage.image = UIImage(named: "background")
         if products.count > 0 {
-            contents = products[0].songs
+            contents = products[0].songs ?? []
             collectionViewVideos.reloadData()
         }
     }
@@ -174,7 +174,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
         animarSelecaoAba(dvdSelecionado: btDvd2)
         backgroundImage.image = UIImage(named: "bg_dvd2")
         if products.count > 1 {
-            contents = products[1].songs
+            contents = products[1].songs ?? []
             collectionViewVideos.reloadData()
         }
     }
@@ -185,7 +185,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
         animarSelecaoAba(dvdSelecionado: btDvd3)
         backgroundImage.image = UIImage(named: "fundo")
         if products.count > 3 {
-            contents = products[3].songs
+            contents = products[3].songs ?? []
             collectionViewVideos.reloadData()
         }
     }
@@ -196,7 +196,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
         animarSelecaoAba(dvdSelecionado: btDvdEn)
         backgroundImage.image = UIImage(named: "fundo_en")
         if products.count > 4 {
-            contents = products[4].songs
+            contents = products[4].songs ?? []
             collectionViewVideos.reloadData()
         }
     }
@@ -207,7 +207,7 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
         animarSelecaoAba(dvdSelecionado: btHoraDormir)
         backgroundImage.image = UIImage(named: "bg_hora_dormir")
         if products.count > 2 {
-            contents = products[2].songs
+            contents = products[2].songs ?? []
             collectionViewVideos.reloadData()
         }
     }
