@@ -41,7 +41,8 @@ jobs:
             ${{ env.PROJECT_NAME }}/ExecutaVideoAtividade.swift \
             ${{ env.PROJECT_NAME }}/InstitucionalAtividade.swift \
             ${{ env.PROJECT_NAME }}/PersonagensAtividade.swift \
-            ${{ env.PROJECT_NAME }}/VideoDownloadManager.swift
+            ${{ env.PROJECT_NAME }}/VideoDownloadManager.swift \
+            ${{ env.PROJECT_NAME }}/VideoCell.swift
           echo "✅ Binário compilado com sucesso!"
 
       - name: Montar Estrutura do Aplicativo (.app) e Injetar Recursos Estáticos
