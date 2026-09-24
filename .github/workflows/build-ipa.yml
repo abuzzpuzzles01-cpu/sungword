@@ -35,6 +35,7 @@ jobs:
             ${{ env.PROJECT_NAME }}/AppDelegate.swift \
             ${{ env.PROJECT_NAME }}/SceneDelegate.swift \
             ${{ env.PROJECT_NAME }}/HomeAtividade.swift \
+            ${{ env.PROJECT_NAME }}/HomeAtividadeDelegate.swift \
             ${{ env.PROJECT_NAME }}/SobreAtividade.swift \
             ${{ env.PROJECT_NAME }}/Song.swift \
             ${{ env.PROJECT_NAME }}/LaunchScreenViewController.swift \
