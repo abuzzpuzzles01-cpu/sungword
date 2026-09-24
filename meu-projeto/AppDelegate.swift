@@ -2,6 +2,7 @@
 import UIKit
 import AVFoundation
 
+@main // <- ADICIONE ESTA LINHA AQUI
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
@@ -19,11 +20,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("Erro ao configurar AVAudioSession no AppDelegate: \(error.localizedDescription)")
         }
 
-        // Inicialização do Window no ciclo de vida iOS < 13 ou quando não se utiliza SceneDelegate
+        // Inicialização do Window para o fluxo puro em UIKit
         let window = UIWindow(frame: UIScreen.main.bounds)
         let rootVC = HomeAtividade()
         let navController = UINavigationController(rootViewController: rootVC)
-        navController.isNavigationBarHidden = true // Esconde a barra de navegação superior
+        navController.isNavigationBarHidden = true
         
         window.rootViewController = navController
         window.makeKeyAndVisible()
