@@ -1,6 +1,5 @@
 import Foundation
 
-// Adicione : Codable na struct
 public struct Song: Codable {
     public let id: String
     public let title: String
@@ -10,8 +9,6 @@ public struct Song: Codable {
     private let baseURL = "https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas"
     
     // MARK: - CodingKeys
-    // Define quais propriedades devem ser serializadas pelo Codable
-    // (Exclui baseURL já que ela é fixa/constante)
     enum CodingKeys: String, CodingKey {
         case id
         case title
@@ -28,13 +25,32 @@ public struct Song: Codable {
         return fileName
     }
     
-    // MARK: - Video URL (Vídeos Pagos / CDN Remote)
-    public func getVideoURL() -> URL? {
+    // MARK: - Download & Local Storage Methods
+    
+    /// Retorna a URL remota de onde o vídeo deve ser baixado/transmitido
+    public func getDownloadURL() -> URL? {
         guard let rawId = getFileName() else { return nil }
         let cleanId = (rawId as NSString).deletingPathExtension
-        
-        let urlString = "\(baseURL)/\(cleanId).mp4"
-        return URL(string: urlString)
+        return URL(string: "\(baseURL)/\(cleanId).mp4")
+    }
+    
+    /// Retorna o caminho do arquivo local na pasta Documents do app
+    public func getLocalVideoMP4URL() -> URL {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
+        return documentsURL.appendingPathComponent("\(cleanId).mp4")
+    }
+    
+    /// Verifica se o vídeo já foi baixado e existe no armazenamento local do dispositivo
+    public func isDownloaded() -> Bool {
+        let localURL = getLocalVideoMP4URL()
+        return FileManager.default.fileExists(atPath: localURL.path)
+    }
+    
+    // MARK: - Video URL (Vídeos Pagos / Remote)
+    public func getVideoURL() -> URL? {
+        return getDownloadURL()
     }
     
     // MARK: - Free Content Check (Músicas Grátis)
