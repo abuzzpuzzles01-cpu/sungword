@@ -275,14 +275,17 @@ class HomeAtividade: UIViewController, VideoAdapterListener, DownloadAllListener
     }
 
     // MARK: - Modais e Navegação
-    @objc private func abrirSobre() {
-        let sobreVC = SobreAtividade()
-        if let nav = navigationController {
-            nav.pushViewController(sobreVC, animated: true)
-        } else {
-            present(sobreVC, animated: true)
-        }
+// Linha 278 em diante no HomeAtividade.swift:
+@objc private func sobreButtonTapped() {
+    let sobreVC = SobreAtividade() // <- LINHA 279 (Erro ocorre aqui se SobreAtividade.swift não for compilado)
+    if let nav = navigationController {
+        nav.pushViewController(sobreVC, animated: true)
+    } else {
+        sobreVC.modalPresentationStyle = .fullScreen
+        present(sobreVC, animated: true, completion: nil)
     }
+}
+
 
     @objc private func openSecurity() {
         // Exibe o alerta ou modal de Controle Parental
