@@ -1,23 +1,39 @@
 import UIKit
+import AVFoundation
 
-@main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
         
-        // Se não usar SceneDelegate:
-        if #available(iOS 13.0, *) {
-            // Gerenciado pelo SceneDelegate
-        } else {
-            let window = UIWindow(frame: UIScreen.main.bounds)
-            let homeVC = HomeAtividade()
-            window.rootViewController = UINavigationController(rootViewController: homeVC)
-            window.makeKeyAndVisible()
-            self.window = window
+        // 1. Configura a sessão global de áudio (permite áudio/vídeo tocar mesmo com o modo silencioso ativado)
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Erro ao inicializar AVAudioSession no AppDelegate: \(error)")
         }
-        
+
         return true
+    }
+
+    // MARK: - UISceneSession Lifecycle (Suporte a Scenes caso seja chamado via SwiftUI)
+    
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didDiscardSceneSessions sceneSessions: Set<UISceneSession>
+    ) {
     }
 }
