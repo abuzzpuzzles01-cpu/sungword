@@ -32,11 +32,13 @@ public class HomeAtividade: UIViewController, UICollectionViewDelegate, UICollec
 
     // MARK: - Lifecycle
     override public func loadView() {
-        super.loadView()
-        // Garante que a view principal tenha fundo e frame VÁLIDOS (evita tela preta inicial)
-        view = UIView(frame: UIScreen.main.bounds)
-        view.backgroundColor = .systemBackground
-    }
+    super.loadView()
+    // Define a cor de fundo explícita para evitar transparência preta
+    let mainView = UIView(frame: UIScreen.main.bounds)
+    mainView.backgroundColor = UIColor(red: 0.15, green: 0.65, blue: 0.88, alpha: 1.0) // Azul "Três Palavrinhas"
+    self.view = mainView
+}
+
 
     override public func viewDidLoad() {
         super.viewDidLoad()
