@@ -1,5 +1,7 @@
 package br.com.emotiondigital.trespalavrinhas;
 
+import android.content.Context;
+import android.net.Uri;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
 
@@ -64,5 +66,14 @@ public class Song implements Serializable {
 
     public void setDownloaded(boolean downloaded) {
         isDownloaded = downloaded;
+    }
+
+    // Retorna a Uri do recurso armazenado em res/raw
+    public Uri getVideoUri(Context context) {
+        int resId = context.getResources().getIdentifier(videoName, "raw", context.getPackageName());
+        if (resId != 0) {
+            return Uri.parse("android.resource://" + context.getPackageName() + "/" + resId);
+        }
+        return null;
     }
 }
