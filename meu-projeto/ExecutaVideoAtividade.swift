@@ -43,12 +43,16 @@ public class ExecutaVideoAtividade: UIViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+    }
+
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Inicia o vídeo no viewDidAppear para garantir que a janela e as bounds da view estejam 100% prontas
         iniciarVideo()
     }
 
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Mantém o tamanho da camada alinhado ao container
         playerLayer?.frame = videoContainerView.bounds
     }
 
@@ -72,7 +76,15 @@ public class ExecutaVideoAtividade: UIViewController {
     }
 
     private func iniciarVideo() {
-        // 1. Determina qual Song será tocada
+        // 1. Reativa a sessão de áudio para mídia de vídeo
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Aviso: Falha ao reconfigurar AVAudioSession: \(error)")
+        }
+
+        // 2. Determina a Song atual
         let songToPlay: Song?
         if let current = currentSong {
             songToPlay = current
@@ -82,52 +94,63 @@ public class ExecutaVideoAtividade: UIViewController {
             songToPlay = nil
         }
 
-        // 2. Obtém a URL do vídeo
+        // 3. Resolve a URL do vídeo
         var targetURL: URL? = songToPlay?.getVideoURL()
         
-        if targetURL == nil, let urlString = downloadUrl, let url = URL(string: urlString) {
-            targetURL = url
+        if targetURL == nil, let urlString = downloadUrl, !urlString.isEmpty {
+            if urlString.hasPrefix("http") {
+                targetURL = URL(string: urlString)
+            } else {
+                targetURL = URL(fileURLWithPath: urlString)
+            }
         }
 
         guard let videoURL = targetURL else {
-            print("Erro: Nenhuma URL de vídeo válida encontrada.")
+            print("❌ ERRO FATAL: Nenhuma URL de vídeo válida encontrada para \(songToPlay?.title ?? "Música Desconhecida").")
             return
         }
 
-        // 3. Limpa o player antigo e observadores
+        print("🎬 Iniciando reprodução do vídeo na URL: \(videoURL.absoluteString)")
+
+        // 4. Limpa executores anteriores
         player?.pause()
         playerItemObserver?.invalidate()
         playerItemObserver = nil
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         
-        // Remove sublayers antigas do container
         videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
-        // 4. Instancia o Item e o Player
+        // 5. Instancia PlayerItem e AVPlayer
         let playerItem = AVPlayerItem(url: videoURL)
         let newPlayer = AVPlayer(playerItem: playerItem)
         self.player = newPlayer
 
-        // 5. Configura a AVPlayerLayer
+        // 6. Configura a AVPlayerLayer
         let layer = AVPlayerLayer(player: newPlayer)
         layer.videoGravity = .resizeAspect
         layer.frame = videoContainerView.bounds
         videoContainerView.layer.addSublayer(layer)
         self.playerLayer = layer
 
-        // 6. Observa o status do playerItem para dar play automático assim que estiver pronto
+        // 7. KVO para acionar play quando estiver pronto
         playerItemObserver = playerItem.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                if item.status == .readyToPlay {
+                switch item.status {
+                case .readyToPlay:
+                    print("✅ Mídia pronta! Iniciando .play()")
                     self.player?.play()
-                } else if item.status == .failed {
-                    print("Erro no carregamento da mídia: \(String(describing: item.error))")
+                case .failed:
+                    print("❌ ERRO ao carregar arquivo de mídia: \(String(describing: item.error?.localizedDescription))")
+                case .unknown:
+                    print("⏳ Carregando mídia...")
+                @unknown default:
+                    break
                 }
             }
         }
 
-        // 7. Notificação de fim de vídeo para tocar o próximo da playlist
+        // 8. Fim do vídeo -> Próximo item
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
