@@ -131,23 +131,20 @@ public class HomeAtividade: UIViewController, UICollectionViewDelegate, UICollec
     }
 
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let song = contents[indexPath.item]
-        let position = indexPath.item
-        
-        let downloadPath = song.isDownloaded() ? song.getLocalVideoMP4URL().path : (song.getDownloadURL()?.absoluteString ?? "")
-
-        let executaVC = ExecutaVideoAtividade()
-        executaVC.currentSong = song
-        executaVC.downloadUrl = downloadPath
-        executaVC.currentIndex = position
-        executaVC.playlist = self.contents
-        
-        // Garante exibição Fullscreen para a ExecutaVideoAtividade não ficar transparente/preta
-        executaVC.modalPresentationStyle = .fullScreen
-        
-        // Pausa a música de fundo antes de abrir o vídeo
-        audioPlayer?.pause()
-        
-        present(executaVC, animated: true, completion: nil)
+    let song = contents[indexPath.item]
+    
+    let executaVC = ExecutaVideoAtividade()
+    executaVC.currentSong = song
+    executaVC.currentIndex = indexPath.item
+    executaVC.playlist = self.contents
+    
+    // Força apresentação Full Screen
+    executaVC.modalPresentationStyle = .fullScreen
+    
+    // Pausa a música de fundo o_sabao.mp3 antes de abrir o vídeo
+    audioPlayer?.pause()
+    
+    present(executaVC, animated: true, completion: 
     }
 }
+    
