@@ -145,6 +145,7 @@ public class HomeAtividade: UIViewController, UICollectionViewDelegate, UICollec
     audioPlayer?.pause()
     
     present(executaVC, animated: true, completion: 
+            
     }
 }
     
