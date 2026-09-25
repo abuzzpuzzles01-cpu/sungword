@@ -12,6 +12,11 @@ jobs:
   build:
     name: Build & Test Android APK
     runs-on: ubuntu-latest
+    
+    # Define a subpasta onde o código Android e o settings.gradle realmente estão
+    defaults:
+      run:
+        working-directory: ./android
 
     steps:
       # 1. Obtém o código fonte do repositório
@@ -25,8 +30,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+          cache-dependency-path: 'android/*.gradle*'
 
-      # 3. Garante e gera os arquivos do Gradle Wrapper se não existirem
+      # 3. Garante e gera os arquivos do Gradle Wrapper caso estejam ausentes na subpasta
       - name: Setup Gradle Wrapper if missing
         run: |
           if [ ! -f "./gradlew" ]; then
@@ -34,7 +40,7 @@ jobs:
             gradle wrapper --gradle-version 8.5
           fi
 
-      # 4. Concede permissão de execução ao script gradlew no Ubuntu
+      # 4. Concede permissão de execução ao script gradlew
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -46,9 +52,9 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      # 7. Salva o APK gerado como um artefato do Workflow para download
+      # 7. Salva o APK gerado como um artefato para download
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
