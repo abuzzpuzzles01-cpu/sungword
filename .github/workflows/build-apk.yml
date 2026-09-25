@@ -12,8 +12,8 @@ jobs:
   build:
     name: Build & Test Android APK
     runs-on: ubuntu-latest
-    
-    # Define a subpasta onde o código Android e o settings.gradle realmente estão
+
+    # Define a subpasta onde o código Android está localizado no repositório
     defaults:
       run:
         working-directory: ./android
@@ -32,7 +32,20 @@ jobs:
           cache: 'gradle'
           cache-dependency-path: 'android/*.gradle*'
 
-      # 3. Garante e gera os arquivos do Gradle Wrapper caso estejam ausentes na subpasta
+      # 3. Garante que o gradle.properties contém as flags do AndroidX
+      - name: Ensure gradle.properties has AndroidX enabled
+        run: |
+          if [ ! -f "gradle.properties" ]; then
+            touch gradle.properties
+          fi
+          if ! grep -q "android.useAndroidX=true" gradle.properties; then
+            echo "android.useAndroidX=true" >> gradle.properties
+          fi
+          if ! grep -q "android.enableJetifier=true" gradle.properties; then
+            echo "android.enableJetifier=true" >> gradle.properties
+          fi
+
+      # 4. Garante e gera os arquivos do Gradle Wrapper se não existirem
       - name: Setup Gradle Wrapper if missing
         run: |
           if [ ! -f "./gradlew" ]; then
@@ -40,19 +53,19 @@ jobs:
             gradle wrapper --gradle-version 8.5
           fi
 
-      # 4. Concede permissão de execução ao script gradlew
+      # 5. Concede permissão de execução ao script gradlew no Ubuntu
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 5. Executa os testes unitários da aplicação
+      # 6. Executa os testes unitários da aplicação
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
-      # 6. Compila e gera o APK de Debug
+      # 7. Compila e gera o APK de Debug
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      # 7. Salva o APK gerado como um artefato para download
+      # 8. Salva o APK gerado como um artefato do Workflow para download
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
