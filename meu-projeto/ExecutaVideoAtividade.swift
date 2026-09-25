@@ -1,6 +1,5 @@
 import UIKit
 import AVFoundation
-import AVKit
 
 public class ExecutaVideoAtividade: UIViewController {
 
@@ -12,6 +11,7 @@ public class ExecutaVideoAtividade: UIViewController {
     
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
+    private var playerItemObserver: NSKeyValueObservation?
     
     // Container onde o vídeo é desenhado
     private let videoContainerView: UIView = {
@@ -25,8 +25,8 @@ public class ExecutaVideoAtividade: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("✕", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 24)
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 26)
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         button.layer.cornerRadius = 20
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -35,7 +35,6 @@ public class ExecutaVideoAtividade: UIViewController {
     // MARK: - Lifecycle
     override public func loadView() {
         super.loadView()
-        // Garante que a view base seja opaca e ocupe a tela inteira
         let mainView = UIView(frame: UIScreen.main.bounds)
         mainView.backgroundColor = .black
         self.view = mainView
@@ -47,10 +46,9 @@ public class ExecutaVideoAtividade: UIViewController {
         iniciarVideo()
     }
 
-    // CRÍTICO PARA EVITAR TELA PRETA:
-    // Garante que a camada do vídeo acompanhe o tamanho real da tela após o layout
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Mantém o tamanho da camada alinhado ao container
         playerLayer?.frame = videoContainerView.bounds
     }
 
@@ -87,7 +85,6 @@ public class ExecutaVideoAtividade: UIViewController {
         // 2. Obtém a URL do vídeo
         var targetURL: URL? = songToPlay?.getVideoURL()
         
-        // Fallback caso venha pela propriedade downloadUrl
         if targetURL == nil, let urlString = downloadUrl, let url = URL(string: urlString) {
             targetURL = url
         }
@@ -97,36 +94,46 @@ public class ExecutaVideoAtividade: UIViewController {
             return
         }
 
-        // 3. Limpa o player antigo se houver
+        // 3. Limpa o player antigo e observadores
         player?.pause()
-        playerLayer?.removeFromSuperlayer()
+        playerItemObserver?.invalidate()
+        playerItemObserver = nil
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        
+        // Remove sublayers antigas do container
+        videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
-        // 4. Cria o item e o AVPlayer
+        // 4. Instancia o Item e o Player
         let playerItem = AVPlayerItem(url: videoURL)
-        player = AVPlayer(playerItem: playerItem)
+        let newPlayer = AVPlayer(playerItem: playerItem)
+        self.player = newPlayer
 
-        // 5. Instancia a AVPlayerLayer com dimensionamento correto
-        let layer = AVPlayerLayer(player: player)
+        // 5. Configura a AVPlayerLayer
+        let layer = AVPlayerLayer(player: newPlayer)
         layer.videoGravity = .resizeAspect
         layer.frame = videoContainerView.bounds
-        
         videoContainerView.layer.addSublayer(layer)
         self.playerLayer = layer
 
-        // 6. Observador para tocar o próximo vídeo ao terminar
+        // 6. Observa o status do playerItem para dar play automático assim que estiver pronto
+        playerItemObserver = playerItem.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if item.status == .readyToPlay {
+                    self.player?.play()
+                } else if item.status == .failed {
+                    print("Erro no carregamento da mídia: \(String(describing: item.error))")
+                }
+            }
+        }
+
+        // 7. Notificação de fim de vídeo para tocar o próximo da playlist
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
             name: .AVPlayerItemDidPlayToEndTime,
             object: playerItem
         )
-
-        // Força atualização imediata de layout
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-
-        player?.play()
     }
 
     @objc private func videoDidFinishPlaying(notification: Notification) {
@@ -136,17 +143,22 @@ public class ExecutaVideoAtividade: UIViewController {
             downloadUrl = currentSong?.downloadUrl
             iniciarVideo()
         } else {
-            dismiss(animated: true, completion: nil)
+            fecharTela()
         }
     }
 
     @objc private func fecharTela() {
+        playerItemObserver?.invalidate()
+        playerItemObserver = nil
         player?.pause()
+        player = nil
         dismiss(animated: true, completion: nil)
     }
 
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        playerItemObserver?.invalidate()
+        playerItemObserver = nil
         player?.pause()
         NotificationCenter.default.removeObserver(self)
     }
