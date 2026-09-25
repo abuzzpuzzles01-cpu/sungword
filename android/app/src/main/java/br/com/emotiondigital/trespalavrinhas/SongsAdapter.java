@@ -6,23 +6,25 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import java.util.List;
 
 public class SongsAdapter extends RecyclerView.Adapter<SongsAdapter.SongViewHolder> {
 
-    public interface OnSongClickListener {
-        void onSongClick(Song song, int position);
+    public interface OnItemClickListener {
+        void onItemClick(Song song);
     }
 
     private final Context context;
-    private final List<Song> songs;
-    private final OnSongClickListener listener;
+    private final List<Song> songList;
+    private final OnItemClickListener listener;
 
-    public SongsAdapter(Context context, List<Song> songs, OnSongClickListener listener) {
+    public SongsAdapter(Context context, List<Song> songList, OnItemClickListener listener) {
         this.context = context;
-        this.songs = songs;
+        this.songList = songList;
         this.listener = listener;
     }
 
@@ -35,49 +37,35 @@ public class SongsAdapter extends RecyclerView.Adapter<SongsAdapter.SongViewHold
 
     @Override
     public void onBindViewHolder(@NonNull SongViewHolder holder, int position) {
-        Song song = songs.get(position);
-
+        Song song = songList.get(position);
         holder.txtTitle.setText(song.getTitle());
 
-        // Carrega a imagem da thumbnail dinâmica a partir dos recursos drawable
-        String thumbName = song.getCleanId().startsWith("video_") ? song.getCleanId() : "video_" + song.getCleanId();
-        int imageResId = context.getResources().getIdentifier(thumbName, "drawable", context.getPackageName());
-        
-        if (imageResId != 0) {
-            holder.imgThumb.setImageResource(imageResId);
+        if (song.isDownloaded()) {
+            holder.imgStatus.setImageResource(android.R.drawable.ic_media_play);
         } else {
-            holder.imgThumb.setImageResource(R.drawable.bg_splash); // Drawable padrão de fallback
-        }
-
-        // Ícone de status (Baixado, Grátis ou Download pendente)
-        if (song.isFree() || song.isDownloaded(context)) {
-            holder.imgStatus.setImageResource(R.drawable.ic_play_circle);
-        } else {
-            holder.imgStatus.setImageResource(R.drawable.ic_download);
+            holder.imgStatus.setImageResource(android.R.drawable.stat_sys_download);
         }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onSongClick(song, position);
+                listener.onItemClick(song);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return songs != null ? songs.size() : 0;
+        return songList.size();
     }
 
-    static class SongViewHolder extends RecyclerView.ViewHolder {
-        ImageView imgThumb;
-        ImageView imgStatus;
+    public static class SongViewHolder extends RecyclerView.ViewHolder {
         TextView txtTitle;
+        ImageView imgStatus;
 
         public SongViewHolder(@NonNull View itemView) {
             super(itemView);
-            imgThumb = itemView.findViewById(R.id.imgThumb);
-            imgStatus = itemView.findViewById(R.id.imgStatus);
             txtTitle = itemView.findViewById(R.id.txtTitle);
+            imgStatus = itemView.findViewById(R.id.imgStatus);
         }
     }
 }
