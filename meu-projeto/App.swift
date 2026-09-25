@@ -1,16 +1,18 @@
 import SwiftUI
+import UIKit
 
-struct MeuProjetoApp: App {
+@main
+struct TresPalavrinhasApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeAtividadeContainer()
+            HomeViewControllerRepresentable()
                 .ignoresSafeArea()
         }
     }
 }
 
-// Wrapper para converter a UIViewController em View do SwiftUI
-struct HomeAtividadeContainer: UIViewControllerRepresentable {
+// Wrapper para acoplar a HomeAtividade (UIKit) dentro do SwiftUI
+struct HomeViewControllerRepresentable: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
         let homeVC = HomeAtividade()
         let navController = UINavigationController(rootViewController: homeVC)
@@ -19,6 +21,6 @@ struct HomeAtividadeContainer: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {
-        // Sem atualização necessária
+        // Atualizações de layout se necessário
     }
 }
