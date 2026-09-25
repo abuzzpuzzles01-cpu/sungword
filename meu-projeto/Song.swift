@@ -5,7 +5,7 @@ public struct Song: Codable {
     public let title: String
     public let fileName: String?
     
-    // URL Base para download/streaming dos vídeos
+    // URL Base do CDN para streaming/download apenas dos vídeos PAGOS
     private let baseURL = "https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas"
     
     // MARK: - CodingKeys
@@ -23,7 +23,6 @@ public struct Song: Codable {
     
     // MARK: - Legacy / Compatibility Properties
     
-    /// Propriedade computada para manter compatibilidade com VideoCell
     public var songName: String? {
         return title
     }
@@ -32,48 +31,7 @@ public struct Song: Codable {
         return fileName
     }
     
-    // MARK: - Download & Local Storage Methods
-    
-    /// Propriedade computada em String para compatibilidade com ExecutaVideoAtividade
-    public var downloadUrl: String? {
-        return getDownloadURL()?.absoluteString
-    }
-    
-    /// Retorna a URL remota (URL) de onde o vídeo deve ser baixado/transmitido
-    public func getDownloadURL() -> URL? {
-        guard let rawId = getFileName() else { return nil }
-        let cleanId = (rawId as NSString).deletingPathExtension
-        return URL(string: "\(baseURL)/\(cleanId).mp4")
-    }
-    
-    /// Retorna o caminho do arquivo .zip local na pasta Documents
-    public func getLocalZipURL() -> URL {
-        let fileManager = FileManager.default
-        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
-        return documentsURL.appendingPathComponent("\(cleanId).zip")
-    }
-    
-    /// Retorna o caminho do arquivo .mp4 local na pasta Documents
-    public func getLocalVideoMP4URL() -> URL {
-        let fileManager = FileManager.default
-        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
-        return documentsURL.appendingPathComponent("\(cleanId).mp4")
-    }
-    
-    /// Verifica se o vídeo já foi baixado e existe no armazenamento local do dispositivo
-    public func isDownloaded() -> Bool {
-        let localURL = getLocalVideoMP4URL()
-        return FileManager.default.fileExists(atPath: localURL.path)
-    }
-    
-    // MARK: - Video URL (Vídeos Pagos / Remote)
-    public func getVideoURL() -> URL? {
-        return getDownloadURL()
-    }
-    
-    // MARK: - Free Content Check (Músicas Grátis)
+    // MARK: - Free Content Check (Músicas Grátis no Bundle)
     public func isFree() -> Bool {
         guard let rawId = getFileName() else { return false }
         let id = (rawId as NSString).deletingPathExtension
@@ -89,7 +47,90 @@ public struct Song: Codable {
         return freeSongs.contains(id)
     }
     
-    // MARK: - Thumbnails Mapping (Padrão video_nome)
+    // MARK: - Main Video URL Resolver
+    
+    /// Retorna a URL final para reprodução no AVPlayer:
+    /// 1. Se for grátis -> Procura no Bundle (.mp4 ou .m4v)
+    /// 2. Se for pago e já foi baixado -> Procura na pasta Documents
+    /// 3. Se for pago e não baixado -> Retorna a URL remota do CDN
+    public func getVideoURL() -> URL? {
+        guard let rawId = getFileName() else { return nil }
+        let cleanId = (rawId as NSString).deletingPathExtension
+        
+        // 1. VÍDEO GRÁTIS: Carrega do Bundle
+        if isFree() {
+            if let bundlePath = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
+                return bundlePath
+            }
+            if let bundlePathM4V = Bundle.main.url(forResource: cleanId, withExtension: "m4v") {
+                return bundlePathM4V
+            }
+        }
+        
+        // 2. VÍDEO PAGO BAIXADO LOCALMENTE
+        if isDownloaded() {
+            return getLocalVideoMP4URL()
+        }
+        
+        // 3. VÍDEO PAGO REMOTO (CDN)
+        return getDownloadURL()
+    }
+    
+    // MARK: - Download & Local Storage Methods
+    
+    public var downloadUrl: String? {
+        return getDownloadURL()?.absoluteString
+    }
+    
+    /// Retorna a URL remota da CDN para os vídeos pagos
+    public func getDownloadURL() -> URL? {
+        guard let rawId = getFileName() else { return nil }
+        let cleanId = (rawId as NSString).deletingPathExtension
+        return URL(string: "\(baseURL)/\(cleanId).mp4")
+    }
+    
+    /// Retorna o caminho local na pasta Documents para vídeos baixados
+    public func getLocalVideoMP4URL() -> URL {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
+        return documentsURL.appendingPathComponent("\(cleanId).mp4")
+    }
+    
+    /// Retorna o caminho do arquivo .zip local na pasta Documents
+    public func getLocalZipURL() -> URL {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
+        return documentsURL.appendingPathComponent("\(cleanId).zip")
+    }
+    
+    /// Verifica se o vídeo pago já foi baixado e existe no armazenamento do app
+    public func isDownloaded() -> Bool {
+        if isFree() { return true } // Vídeos grátis já estão embutidos
+        
+        let localURL = getLocalVideoMP4URL()
+        let fileManager = FileManager.default
+        
+        guard fileManager.fileExists(atPath: localURL.path) else {
+            return false
+        }
+        
+        // Evita arquivo corrompido de 0 bytes
+        do {
+            let attributes = try fileManager.attributesOfItem(atPath: localURL.path)
+            if let fileSize = attributes[.size] as? UInt64, fileSize > 0 {
+                return true
+            } else {
+                try fileManager.removeItem(at: localURL)
+                return false
+            }
+        } catch {
+            return false
+        }
+    }
+    
+    // MARK: - Thumbnails Mapping
     public func getThumb() -> String? {
         guard let rawId = getFileName() else {
             return "bg_splash"
