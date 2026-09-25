@@ -4,13 +4,12 @@ import AVKit
 
 public class ExecutaVideoAtividade: UIViewController {
 
-    // MARK: - Properties (Injetadas pela HomeAtividade)
+    // MARK: - Properties
     public var currentSong: Song?
     public var downloadUrl: String?
     public var currentIndex: Int = 0
     public var playlist: [Song] = []
     
-    // MARK: - Player Properties
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     
@@ -21,6 +20,26 @@ public class ExecutaVideoAtividade: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
+    
+    private let closeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("✕", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 24)
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 20
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    // MARK: - Lifecycle
+    override public func loadView() {
+        super.loadView()
+        // Garante que a view base seja opaca e ocupe a tela inteira
+        let mainView = UIView(frame: UIScreen.main.bounds)
+        mainView.backgroundColor = .black
+        self.view = mainView
+    }
 
     override public func viewDidLoad() {
         super.viewDidLoad()
@@ -28,21 +47,29 @@ public class ExecutaVideoAtividade: UIViewController {
         iniciarVideo()
     }
 
-    // Garante que o frame do playerLayer se ajuste ao tamanho real da tela (Evita Tela Preta)
+    // CRÍTICO PARA EVITAR TELA PRETA:
+    // Garante que a camada do vídeo acompanhe o tamanho real da tela após o layout
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         playerLayer?.frame = videoContainerView.bounds
     }
 
     private func setupUI() {
-        view.backgroundColor = .black
         view.addSubview(videoContainerView)
+        view.addSubview(closeButton)
+
+        closeButton.addTarget(self, action: #selector(fecharTela), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
             videoContainerView.topAnchor.constraint(equalTo: view.topAnchor),
             videoContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             videoContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            videoContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            videoContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            closeButton.widthAnchor.constraint(equalToConstant: 40),
+            closeButton.heightAnchor.constraint(equalToConstant: 40)
         ])
     }
 
@@ -57,39 +84,37 @@ public class ExecutaVideoAtividade: UIViewController {
             songToPlay = nil
         }
 
-        // 2. Obtém a URL do vídeo (Bundle se for grátis, Local/CDN se for pago)
+        // 2. Obtém a URL do vídeo
         var targetURL: URL? = songToPlay?.getVideoURL()
         
-        // Fallback para downloadUrl se o modelo não retornar
+        // Fallback caso venha pela propriedade downloadUrl
         if targetURL == nil, let urlString = downloadUrl, let url = URL(string: urlString) {
             targetURL = url
         }
 
         guard let videoURL = targetURL else {
-            print("Erro: Nenhuma URL de vídeo encontrada.")
+            print("Erro: Nenhuma URL de vídeo válida encontrada.")
             return
         }
 
-        // 3. Limpa o player anterior se existir
+        // 3. Limpa o player antigo se houver
         player?.pause()
+        playerLayer?.removeFromSuperlayer()
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
 
-        // 4. Configura o AVPlayer
+        // 4. Cria o item e o AVPlayer
         let playerItem = AVPlayerItem(url: videoURL)
         player = AVPlayer(playerItem: playerItem)
 
-        // 5. Configura a camada visual AVPlayerLayer
-        if playerLayer == nil {
-            let layer = AVPlayerLayer(player: player)
-            layer.videoGravity = .resizeAspect
-            videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-            videoContainerView.layer.addSublayer(layer)
-            self.playerLayer = layer
-        } else {
-            playerLayer?.player = player
-        }
+        // 5. Instancia a AVPlayerLayer com dimensionamento correto
+        let layer = AVPlayerLayer(player: player)
+        layer.videoGravity = .resizeAspect
+        layer.frame = videoContainerView.bounds
+        
+        videoContainerView.layer.addSublayer(layer)
+        self.playerLayer = layer
 
-        // 6. Registra notificação para tocar a próxima música ao fim do vídeo
+        // 6. Observador para tocar o próximo vídeo ao terminar
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
@@ -97,14 +122,14 @@ public class ExecutaVideoAtividade: UIViewController {
             object: playerItem
         )
 
-        // Force layout & Play
+        // Força atualização imediata de layout
         view.setNeedsLayout()
         view.layoutIfNeeded()
+
         player?.play()
     }
 
     @objc private func videoDidFinishPlaying(notification: Notification) {
-        // Toca automaticamente o próximo vídeo da playlist se houver
         if !playlist.isEmpty && currentIndex + 1 < playlist.count {
             currentIndex += 1
             currentSong = playlist[currentIndex]
@@ -113,6 +138,11 @@ public class ExecutaVideoAtividade: UIViewController {
         } else {
             dismiss(animated: true, completion: nil)
         }
+    }
+
+    @objc private func fecharTela() {
+        player?.pause()
+        dismiss(animated: true, completion: nil)
     }
 
     override public func viewWillDisappear(_ animated: Bool) {
