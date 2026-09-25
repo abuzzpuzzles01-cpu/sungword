@@ -54,24 +54,60 @@ public struct Song: Codable {
     /// 2. Se for pago e já foi baixado -> Procura na pasta Documents (.mp4)
     /// 3. Se for pago e não baixado -> Retorna a URL remota do CDN (.mp4)
     public func getVideoURL() -> URL? {
-        guard let rawId = getFileName() else { return nil }
-        let cleanId = (rawId as NSString).deletingPathExtension
-        
-        // 1. VÍDEO GRÁTIS: Carrega do Bundle (.mp4)
-        if isFree() {
-            if let bundlePath = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
-                return bundlePath
-            }
-        }
-        
-        // 2. VÍDEO PAGO BAIXADO LOCALMENTE
-        if isDownloaded() {
-            return getLocalVideoMP4URL()
-        }
-        
-        // 3. VÍDEO PAGO REMOTO (CDN)
-        return getDownloadURL()
+    guard let rawFileName = getFileName(), !rawFileName.isEmpty else {
+        print("❌ [Song] fileName está nulo ou vazio para a música \(title)")
+        return nil
     }
+    
+    // Remove qualquer extensão para podermos testar com segurança
+    let cleanId = (rawFileName as NSString).deletingPathExtension
+    
+    // ----------------------------------------------------
+    // 1. MÚSICA GRÁTIS (Procura no Bundle da aplicação)
+    // ----------------------------------------------------
+    if isFree() {
+        // Tentativa A: Busca direta na raiz do Bundle com a extensão .mp4
+        if let bundleURL = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
+            print("✅ [Bundle] Vídeo localizado no Bundle: \(bundleURL.lastPathComponent)")
+            return bundleURL
+        }
+        
+        // Tentativa B: Busca pelo nome completo original (caso o arquivo no Xcode já tenha .mp4 no nome)
+        if let rawBundleURL = Bundle.main.url(forResource: rawFileName, withExtension: nil) {
+            print("✅ [Bundle] Vídeo localizado no Bundle pelo nome bruto: \(rawBundleURL.lastPathComponent)")
+            return rawBundleURL
+        }
+        
+        // Tentativa C: Busca dentro de subpastas/grupos do Bundle (ex: "Videos/dvd1_o_sabao.mp4")
+        if let path = Bundle.main.path(forResource: cleanId, ofType: "mp4") {
+            let fileURL = URL(fileURLWithPath: path)
+            print("✅ [Bundle] Vídeo localizado via Path: \(fileURL.lastPathComponent)")
+            return fileURL
+        }
+        
+        print("❌ [Bundle ERRO] Vídeo grátis '\(cleanId).mp4' NÃO foi encontrado no Bundle do App. Verifique o Target Membership no Xcode!")
+    }
+    
+    // ----------------------------------------------------
+    // 2. MÚSICA PAGA BAIXADA LOCALMENTE (Pasta Documents)
+    // ----------------------------------------------------
+    if isDownloaded() {
+        let localURL = getLocalVideoMP4URL()
+        print("✅ [Local] Executando vídeo baixado do armazenamento: \(localURL.lastPathComponent)")
+        return localURL
+    }
+    
+    // ----------------------------------------------------
+    // 3. MÚSICA PAGA REMOTA (Streaming via CDN)
+    // ----------------------------------------------------
+    if let remoteURL = getDownloadURL() {
+        print("🌐 [CDN] Executando vídeo via Streaming remoto: \(remoteURL.absoluteString)")
+        return remoteURL
+    }
+    
+    return nil
+}
+
     
     // MARK: - Download & Local Storage Methods
     
