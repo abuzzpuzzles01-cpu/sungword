@@ -50,20 +50,17 @@ public struct Song: Codable {
     // MARK: - Main Video URL Resolver
     
     /// Retorna a URL final para reprodução no AVPlayer:
-    /// 1. Se for grátis -> Procura no Bundle (.mp4 ou .m4v)
-    /// 2. Se for pago e já foi baixado -> Procura na pasta Documents
-    /// 3. Se for pago e não baixado -> Retorna a URL remota do CDN
+    /// 1. Se for grátis -> Procura no Bundle (.mp4)
+    /// 2. Se for pago e já foi baixado -> Procura na pasta Documents (.mp4)
+    /// 3. Se for pago e não baixado -> Retorna a URL remota do CDN (.mp4)
     public func getVideoURL() -> URL? {
         guard let rawId = getFileName() else { return nil }
         let cleanId = (rawId as NSString).deletingPathExtension
         
-        // 1. VÍDEO GRÁTIS: Carrega do Bundle
+        // 1. VÍDEO GRÁTIS: Carrega do Bundle (.mp4)
         if isFree() {
             if let bundlePath = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
                 return bundlePath
-            }
-            if let bundlePathM4V = Bundle.main.url(forResource: cleanId, withExtension: "m4v") {
-                return bundlePathM4V
             }
         }
         
