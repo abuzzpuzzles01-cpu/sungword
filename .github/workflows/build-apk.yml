@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build & Test Android
+    name: Build & Test Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -26,19 +26,27 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. Concede permissão de execução ao Gradle Wrapper
+      # 3. Garante e gera os arquivos do Gradle Wrapper se não existirem
+      - name: Setup Gradle Wrapper if missing
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            echo "gradlew não encontrado. Gerando novo wrapper..."
+            gradle wrapper --gradle-version 8.5
+          fi
+
+      # 4. Concede permissão de execução ao script gradlew no Ubuntu
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4. Executa os testes unitários da aplicação
+      # 5. Executa os testes unitários da aplicação
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
-      # 5. Compila e gera o APK de Debug
+      # 6. Compila e gera o APK de Debug
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      # 6. Salva o APK gerado como um artefato para download
+      # 7. Salva o APK gerado como um artefato do Workflow para download
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
