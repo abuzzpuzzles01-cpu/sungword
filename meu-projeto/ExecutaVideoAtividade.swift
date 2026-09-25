@@ -13,10 +13,10 @@ public class ExecutaVideoAtividade: UIViewController {
     private var playerLayer: AVPlayerLayer?
     private var playerItemObserver: NSKeyValueObservation?
     
-    // Camada de degradê colorido para o fundo infantil
+    // Camada de degradê colorido para o fundo
     private let gradientLayer = CAGradientLayer()
     
-    // Container onde o vídeo é desenhado (deve ser clear para não tapar o AVPlayerLayer)
+    // Container transparente onde o AVPlayerLayer é encaixado
     private let videoContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -26,7 +26,7 @@ public class ExecutaVideoAtividade: UIViewController {
         return view
     }()
     
-    // Botão de fechar customizado (✕)
+    // Botão de fechar (✕)
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("✕", for: .normal)
@@ -45,7 +45,7 @@ public class ExecutaVideoAtividade: UIViewController {
         super.loadView()
         let mainView = UIView(frame: UIScreen.main.bounds)
         
-        // Configura o degradê colorido infantil (Azul -> Amarelo)
+        // Fundo infantil em degradê azul/amarelo
         gradientLayer.colors = [
             UIColor(red: 0.23, green: 0.73, blue: 0.95, alpha: 1.0).cgColor,
             UIColor(red: 1.00, green: 0.84, blue: 0.31, alpha: 1.0).cgColor
@@ -71,12 +71,8 @@ public class ExecutaVideoAtividade: UIViewController {
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         gradientLayer.frame = view.bounds
-        
         if let layer = playerLayer {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
             layer.frame = videoContainerView.bounds
-            CATransaction.commit()
         }
     }
 
@@ -88,66 +84,51 @@ public class ExecutaVideoAtividade: UIViewController {
         closeButton.addTarget(self, action: #selector(fecharTela), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
-            // Container do vídeo centralizado
-            videoContainerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50),
-            videoContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            videoContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            videoContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+            videoContainerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
+            videoContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            videoContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            videoContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
 
-            // Botão fechar no canto superior direito
             closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             closeButton.widthAnchor.constraint(equalToConstant: 40),
             closeButton.heightAnchor.constraint(equalToConstant: 40)
         ])
     }
 
-    // MARK: - Video Playback Logic
+    // MARK: - Video Execution
     private func iniciarVideo() {
-        // 1. Reativa a sessão de áudio para mídia de vídeo
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("Aviso: Falha ao reconfigurar AVAudioSession: \(error)")
+            print("Aviso: Falha na AVAudioSession: \(error)")
         }
 
-        // 2. Determina a música a ser tocada
-        let songToPlay: Song?
-        if let current = currentSong {
-            songToPlay = current
-        } else if !playlist.isEmpty && currentIndex < playlist.count {
-            songToPlay = playlist[currentIndex]
-        } else {
-            songToPlay = nil
-        }
+        let songToPlay = currentSong ?? (!playlist.isEmpty && currentIndex < playlist.count ? playlist[currentIndex] : nil)
 
-        // 3. Resolve a URL do vídeo
-        var targetURL: URL? = songToPlay?.getVideoURL()
-        if targetURL == nil, let urlString = downloadUrl, !urlString.isEmpty {
-            targetURL = urlString.hasPrefix("http") ? URL(string: urlString) : URL(fileURLWithPath: urlString)
-        }
-
-        guard let videoURL = targetURL else {
-            print("❌ ERRO FATAL: Nenhuma URL de vídeo válida para \(songToPlay?.title ?? "Música Desconhecida").")
+        guard let song = songToPlay else {
+            print("❌ ERRO: Nenhuma música informada.")
             return
         }
 
-        print("🎬 Abrindo vídeo na URL: \(videoURL.absoluteString)")
+        guard let videoURL = song.getVideoURL() else {
+            print("❌ ERRO: Não foi possível obter a URL do vídeo para \(song.title).")
+            return
+        }
 
-        // 4. Limpa executores anteriores
+        print("🎬 Iniciando vídeo: \(videoURL.lastPathComponent)")
+
+        // Limpeza de player antigo
         player?.pause()
         playerItemObserver?.invalidate()
         playerItemObserver = nil
-        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
-        // 5. Instancia PlayerItem e AVPlayer
         let playerItem = AVPlayerItem(url: videoURL)
         let newPlayer = AVPlayer(playerItem: playerItem)
         self.player = newPlayer
 
-        // 6. Configura a AVPlayerLayer
         let layer = AVPlayerLayer(player: newPlayer)
         layer.videoGravity = .resizeAspect
         
@@ -156,22 +137,19 @@ public class ExecutaVideoAtividade: UIViewController {
         videoContainerView.layer.addSublayer(layer)
         self.playerLayer = layer
 
-        // 7. KVO para iniciar o Play somente quando a mídia estiver pronta
+        // Observa o status para dar o play quando a mídia estiver pronta
         playerItemObserver = playerItem.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if item.status == .readyToPlay {
-                    print("✅ Mídia pronta para reprodução!")
-                    self.view.setNeedsLayout()
-                    self.view.layoutIfNeeded()
+                    print("✅ Reproduzindo vídeo: \(videoURL.lastPathComponent)")
                     self.player?.play()
                 } else if item.status == .failed {
-                    print("❌ ERRO ao carregar arquivo de mídia: \(String(describing: item.error?.localizedDescription))")
+                    print("❌ ERRO ao carregar playerItem: \(String(describing: item.error))")
                 }
             }
         }
 
-        // 8. Fim do vídeo -> Toca o próximo item da playlist
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
@@ -184,7 +162,6 @@ public class ExecutaVideoAtividade: UIViewController {
         if !playlist.isEmpty && currentIndex + 1 < playlist.count {
             currentIndex += 1
             currentSong = playlist[currentIndex]
-            downloadUrl = currentSong?.downloadUrl
             iniciarVideo()
         } else {
             fecharTela()
