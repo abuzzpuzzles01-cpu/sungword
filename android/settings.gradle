@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "3 Palavrinhas"
+rootProject.name = "android"
 include ':app'
