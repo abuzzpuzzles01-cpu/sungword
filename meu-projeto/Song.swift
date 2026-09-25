@@ -34,7 +34,7 @@ public struct Song: Codable {
     // MARK: - Free Content Check (Músicas Grátis no Bundle)
     public func isFree() -> Bool {
         guard let rawId = getFileName() else { return false }
-        let id = (rawId as NSString).deletingPathExtension
+        let cleanId = (rawId as NSString).deletingPathExtension
         
         let freeSongs: Set<String> = [
             "dvd1_o_sabao",          // DVD 1 (Grátis)
@@ -44,70 +44,60 @@ public struct Song: Codable {
             "tlw_soap"               // Inglês (Grátis)
         ]
         
-        return freeSongs.contains(id)
+        // Trata caso a string já venha com 'video_'
+        let normalizedId = cleanId.hasPrefix("video_") ? String(cleanId.dropFirst(6)) : cleanId
+        return freeSongs.contains(normalizedId)
     }
     
     // MARK: - Main Video URL Resolver
     
-    /// Retorna a URL final para reprodução no AVPlayer:
-    /// 1. Se for grátis -> Procura no Bundle (.mp4)
-    /// 2. Se for pago e já foi baixado -> Procura na pasta Documents (.mp4)
+    /// Retorna a URL final para reprodução:
+    /// 1. Se for grátis -> Procura no Bundle com o prefixo 'video_' (ex: video_dvd1_o_sabao.mp4)
+    /// 2. Se for pago e baixado -> Procura na pasta Documents (video_id.mp4)
     /// 3. Se for pago e não baixado -> Retorna a URL remota do CDN (.mp4)
     public func getVideoURL() -> URL? {
-    guard let rawFileName = getFileName(), !rawFileName.isEmpty else {
-        print("❌ [Song] fileName está nulo ou vazio para a música \(title)")
+        guard let rawFileName = getFileName(), !rawFileName.isEmpty else {
+            print("❌ [Song] fileName está nulo ou vazio para a música \(title)")
+            return nil
+        }
+        
+        let cleanId = (rawFileName as NSString).deletingPathExtension
+        
+        // Garante que o nome tenha o prefixo "video_"
+        let videoFileName = cleanId.hasPrefix("video_") ? cleanId : "video_\(cleanId)"
+        
+        // 1. VÍDEO GRÁTIS: Carrega do Bundle (ex: video_dvd1_o_sabao.mp4)
+        if isFree() {
+            // Busca pelo nome com o prefixo 'video_'
+            if let bundleURL = Bundle.main.url(forResource: videoFileName, withExtension: "mp4") {
+                print("✅ [Bundle MP4]: Encontrado \(bundleURL.lastPathComponent)")
+                return bundleURL
+            }
+            
+            // Fallback: Busca caso o recurso no Bundle não utilize o prefixo
+            if let rawBundleURL = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
+                print("✅ [Bundle MP4 Direct]: Encontrado \(rawBundleURL.lastPathComponent)")
+                return rawBundleURL
+            }
+            
+            print("❌ [Bundle ERRO]: Arquivo '\(videoFileName).mp4' não encontrado no Bundle do App.")
+        }
+        
+        // 2. VÍDEO PAGO BAIXADO LOCALMENTE
+        if isDownloaded() {
+            let localURL = getLocalVideoMP4URL()
+            print("✅ [Local MP4]: Encontrado na Documents \(localURL.lastPathComponent)")
+            return localURL
+        }
+        
+        // 3. VÍDEO PAGO REMOTO (CDN)
+        if let remoteURL = getDownloadURL() {
+            print("🌐 [CDN Stream]: \(remoteURL.absoluteString)")
+            return remoteURL
+        }
+        
         return nil
     }
-    
-    // Remove qualquer extensão para podermos testar com segurança
-    let cleanId = (rawFileName as NSString).deletingPathExtension
-    
-    // ----------------------------------------------------
-    // 1. MÚSICA GRÁTIS (Procura no Bundle da aplicação)
-    // ----------------------------------------------------
-    if isFree() {
-        // Tentativa A: Busca direta na raiz do Bundle com a extensão .mp4
-        if let bundleURL = Bundle.main.url(forResource: cleanId, withExtension: "mp4") {
-            print("✅ [Bundle] Vídeo localizado no Bundle: \(bundleURL.lastPathComponent)")
-            return bundleURL
-        }
-        
-        // Tentativa B: Busca pelo nome completo original (caso o arquivo no Xcode já tenha .mp4 no nome)
-        if let rawBundleURL = Bundle.main.url(forResource: rawFileName, withExtension: nil) {
-            print("✅ [Bundle] Vídeo localizado no Bundle pelo nome bruto: \(rawBundleURL.lastPathComponent)")
-            return rawBundleURL
-        }
-        
-        // Tentativa C: Busca dentro de subpastas/grupos do Bundle (ex: "Videos/dvd1_o_sabao.mp4")
-        if let path = Bundle.main.path(forResource: cleanId, ofType: "mp4") {
-            let fileURL = URL(fileURLWithPath: path)
-            print("✅ [Bundle] Vídeo localizado via Path: \(fileURL.lastPathComponent)")
-            return fileURL
-        }
-        
-        print("❌ [Bundle ERRO] Vídeo grátis '\(cleanId).mp4' NÃO foi encontrado no Bundle do App. Verifique o Target Membership no Xcode!")
-    }
-    
-    // ----------------------------------------------------
-    // 2. MÚSICA PAGA BAIXADA LOCALMENTE (Pasta Documents)
-    // ----------------------------------------------------
-    if isDownloaded() {
-        let localURL = getLocalVideoMP4URL()
-        print("✅ [Local] Executando vídeo baixado do armazenamento: \(localURL.lastPathComponent)")
-        return localURL
-    }
-    
-    // ----------------------------------------------------
-    // 3. MÚSICA PAGA REMOTA (Streaming via CDN)
-    // ----------------------------------------------------
-    if let remoteURL = getDownloadURL() {
-        print("🌐 [CDN] Executando vídeo via Streaming remoto: \(remoteURL.absoluteString)")
-        return remoteURL
-    }
-    
-    return nil
-}
-
     
     // MARK: - Download & Local Storage Methods
     
@@ -119,28 +109,33 @@ public struct Song: Codable {
     public func getDownloadURL() -> URL? {
         guard let rawId = getFileName() else { return nil }
         let cleanId = (rawId as NSString).deletingPathExtension
-        return URL(string: "\(baseURL)/\(cleanId).mp4")
+        let normalizedId = cleanId.hasPrefix("video_") ? String(cleanId.dropFirst(6)) : cleanId
+        return URL(string: "\(baseURL)/\(normalizedId).mp4")
     }
     
-    /// Retorna o caminho local na pasta Documents para vídeos baixados
+    /// Retorna o caminho local na pasta Documents para vídeos baixados (video_id.mp4)
     public func getLocalVideoMP4URL() -> URL {
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
-        return documentsURL.appendingPathComponent("\(cleanId).mp4")
+        let rawId = getFileName() ?? id
+        let cleanId = (rawId as NSString).deletingPathExtension
+        let videoFileName = cleanId.hasPrefix("video_") ? cleanId : "video_\(cleanId)"
+        return documentsURL.appendingPathComponent("\(videoFileName).mp4")
     }
     
     /// Retorna o caminho do arquivo .zip local na pasta Documents
     public func getLocalZipURL() -> URL {
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let cleanId = ((getFileName() ?? id) as NSString).deletingPathExtension
-        return documentsURL.appendingPathComponent("\(cleanId).zip")
+        let rawId = getFileName() ?? id
+        let cleanId = (rawId as NSString).deletingPathExtension
+        let normalizedId = cleanId.hasPrefix("video_") ? String(cleanId.dropFirst(6)) : cleanId
+        return documentsURL.appendingPathComponent("\(normalizedId).zip")
     }
     
-    /// Verifica se o vídeo pago já foi baixado e existe no armazenamento do app
+    /// Verifica se o vídeo pago já foi baixado e existe na pasta Documents
     public func isDownloaded() -> Bool {
-        if isFree() { return true } // Vídeos grátis já estão embutidos
+        if isFree() { return true }
         
         let localURL = getLocalVideoMP4URL()
         let fileManager = FileManager.default
@@ -149,7 +144,6 @@ public struct Song: Codable {
             return false
         }
         
-        // Evita arquivo corrompido de 0 bytes
         do {
             let attributes = try fileManager.attributesOfItem(atPath: localURL.path)
             if let fileSize = attributes[.size] as? UInt64, fileSize > 0 {
@@ -169,7 +163,8 @@ public struct Song: Codable {
             return "bg_splash"
         }
         
-        let id = (rawId as NSString).deletingPathExtension
+        let cleanId = (rawId as NSString).deletingPathExtension
+        let id = cleanId.hasPrefix("video_") ? String(cleanId.dropFirst(6)) : cleanId
         
         let thumbnailMap: [String: String] = [
             // DVD 1
