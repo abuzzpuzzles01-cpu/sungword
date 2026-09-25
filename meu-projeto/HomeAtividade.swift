@@ -131,21 +131,19 @@ public class HomeAtividade: UIViewController, UICollectionViewDelegate, UICollec
     }
 
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-    let song = contents[indexPath.item]
-    
-    let executaVC = ExecutaVideoAtividade()
-    executaVC.currentSong = song
-    executaVC.currentIndex = indexPath.item
-    executaVC.playlist = self.contents
-    
-    // Força apresentação Full Screen
-    executaVC.modalPresentationStyle = .fullScreen
-    
-    // Pausa a música de fundo o_sabao.mp3 antes de abrir o vídeo
-    audioPlayer?.pause()
-    
-    present(executaVC, animated: true, completion: 
-            
+        let song = contents[indexPath.item]
+        
+        let executaVC = ExecutaVideoAtividade()
+        executaVC.currentSong = song
+        executaVC.currentIndex = indexPath.item
+        executaVC.playlist = self.contents
+        
+        // Força apresentação Full Screen
+        executaVC.modalPresentationStyle = .fullScreen
+        
+        // Pausa a música de fundo o_sabao.mp3 antes de abrir o vídeo
+        audioPlayer?.pause()
+        
+        present(executaVC, animated: true, completion: nil)
     }
 }
-    
