@@ -4,12 +4,17 @@ import AVKit
 
 public class ExecutaVideoAtividade: UIViewController {
 
+    // MARK: - Properties (Injetadas pela HomeAtividade)
     public var currentSong: Song?
+    public var downloadUrl: String?
+    public var currentIndex: Int = 0
+    public var playlist: [Song] = []
     
+    // MARK: - Player Properties
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     
-    // Container onde o vídeo será desenhado
+    // Container onde o vídeo é desenhado
     private let videoContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .black
@@ -23,10 +28,9 @@ public class ExecutaVideoAtividade: UIViewController {
         iniciarVideo()
     }
 
-    // IMPORTANTE: O frame do playerLayer DEVE ser atualizado aqui
+    // Garante que o frame do playerLayer se ajuste ao tamanho real da tela (Evita Tela Preta)
     override public func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Garante que a camada do vídeo ocupe 100% da containerView
         playerLayer?.frame = videoContainerView.bounds
     }
 
@@ -43,35 +47,77 @@ public class ExecutaVideoAtividade: UIViewController {
     }
 
     private func iniciarVideo() {
-        guard let song = currentSong, let videoURL = song.getVideoURL() else {
-            print("Erro: URL do vídeo não encontrada.")
+        // 1. Determina qual Song será tocada
+        let songToPlay: Song?
+        if let current = currentSong {
+            songToPlay = current
+        } else if !playlist.isEmpty && currentIndex < playlist.count {
+            songToPlay = playlist[currentIndex]
+        } else {
+            songToPlay = nil
+        }
+
+        // 2. Obtém a URL do vídeo (Bundle se for grátis, Local/CDN se for pago)
+        var targetURL: URL? = songToPlay?.getVideoURL()
+        
+        // Fallback para downloadUrl se o modelo não retornar
+        if targetURL == nil, let urlString = downloadUrl, let url = URL(string: urlString) {
+            targetURL = url
+        }
+
+        guard let videoURL = targetURL else {
+            print("Erro: Nenhuma URL de vídeo encontrada.")
             return
         }
 
-        // 1. Criar o Player
+        // 3. Limpa o player anterior se existir
+        player?.pause()
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+
+        // 4. Configura o AVPlayer
         let playerItem = AVPlayerItem(url: videoURL)
         player = AVPlayer(playerItem: playerItem)
 
-        // 2. Criar e configurar a AVPlayerLayer
-        let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspect
-        
-        // Remove camadas antigas antes de adicionar
-        videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        videoContainerView.layer.addSublayer(layer)
-        
-        self.playerLayer = layer
+        // 5. Configura a camada visual AVPlayerLayer
+        if playerLayer == nil {
+            let layer = AVPlayerLayer(player: player)
+            layer.videoGravity = .resizeAspect
+            videoContainerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+            videoContainerView.layer.addSublayer(layer)
+            self.playerLayer = layer
+        } else {
+            playerLayer?.player = player
+        }
 
-        // 3. Forçar o layout inicial do frame
+        // 6. Registra notificação para tocar a próxima música ao fim do vídeo
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(videoDidFinishPlaying),
+            name: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem
+        )
+
+        // Force layout & Play
         view.setNeedsLayout()
         view.layoutIfNeeded()
-
-        // 4. Iniciar a reprodução
         player?.play()
+    }
+
+    @objc private func videoDidFinishPlaying(notification: Notification) {
+        // Toca automaticamente o próximo vídeo da playlist se houver
+        if !playlist.isEmpty && currentIndex + 1 < playlist.count {
+            currentIndex += 1
+            currentSong = playlist[currentIndex]
+            downloadUrl = currentSong?.downloadUrl
+            iniciarVideo()
+        } else {
+            dismiss(animated: true, completion: nil)
+        }
     }
 
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         player?.pause()
+        NotificationCenter.default.removeObserver(self)
     }
 }
