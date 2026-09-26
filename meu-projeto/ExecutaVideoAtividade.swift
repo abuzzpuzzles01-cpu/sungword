@@ -1,23 +1,24 @@
 import UIKit
+import AVKit
 import AVFoundation
 
 public class ExecutaVideoAtividade: UIViewController {
 
-    // MARK: - Propriedades Públicas (Acessíveis pelo HomeAtividade)
+    // MARK: - Propriedades Públicas (Acessadas pelo HomeAtividade)
     public var currentSong: Song?
     public var downloadUrl: String?
     public var currentIndex: Int = 0
     public var playlist: [Song] = []
-    
-    // MARK: - Propriedades Privadas de Controle de Vídeo
+
+    // MARK: - Propriedades Privadas do Player
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var playerItemObserver: NSKeyValueObservation?
-    
-    // Camada em degradê colorido para fundo infantil
+
+    // Fundo colorido em degradê
     private let gradientLayer = CAGradientLayer()
-    
-    // Container transparente onde o vídeo é encaixado
+
+    // Container do vídeo
     private let videoContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -26,8 +27,8 @@ public class ExecutaVideoAtividade: UIViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
-    
-    // Botão de fechar (✕) em estilo infantil
+
+    // Botão de Fechar (✕)
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("✕", for: .normal)
@@ -45,8 +46,7 @@ public class ExecutaVideoAtividade: UIViewController {
     override public func loadView() {
         super.loadView()
         let mainView = UIView(frame: UIScreen.main.bounds)
-        
-        // Fundo infantil em degradê (azul / amarelo)
+
         gradientLayer.colors = [
             UIColor(red: 0.23, green: 0.73, blue: 0.95, alpha: 1.0).cgColor,
             UIColor(red: 1.00, green: 0.84, blue: 0.31, alpha: 1.0).cgColor
@@ -55,7 +55,7 @@ public class ExecutaVideoAtividade: UIViewController {
         gradientLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
         gradientLayer.frame = mainView.bounds
         mainView.layer.insertSublayer(gradientLayer, at: 0)
-        
+
         self.view = mainView
     }
 
@@ -85,7 +85,7 @@ public class ExecutaVideoAtividade: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // MARK: - Configuração da UI
+    // MARK: - Configuração da Interface
     private func setupUI() {
         view.addSubview(videoContainerView)
         view.addSubview(closeButton)
@@ -105,9 +105,8 @@ public class ExecutaVideoAtividade: UIViewController {
         ])
     }
 
-    // MARK: - Execução do Vídeo
+    // MARK: - Execução do Vídeo via AVFoundation
     private func iniciarVideo() {
-        // Configura sessão de áudio com AVFoundation
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
@@ -127,9 +126,6 @@ public class ExecutaVideoAtividade: UIViewController {
             return
         }
 
-        print("🎬 Iniciando vídeo: \(videoURL.lastPathComponent)")
-
-        // Limpa instâncias anteriores
         player?.pause()
         playerItemObserver?.invalidate()
         playerItemObserver = nil
@@ -141,18 +137,16 @@ public class ExecutaVideoAtividade: UIViewController {
 
         let layer = AVPlayerLayer(player: newPlayer)
         layer.videoGravity = .resizeAspect
-        
+
         view.layoutIfNeeded()
         layer.frame = videoContainerView.bounds
         videoContainerView.layer.addSublayer(layer)
         self.playerLayer = layer
 
-        // Observa status para iniciar a reprodução assim que pronto
         playerItemObserver = playerItem.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
-            DispatchQueue.main.async {
+            DispatchQueue.asyncOnMain {
                 guard let self = self else { return }
                 if item.status == .readyToPlay {
-                    print("✅ Reproduzindo vídeo: \(videoURL.lastPathComponent)")
                     self.player?.play()
                 } else if item.status == .failed {
                     print("❌ ERRO ao carregar playerItem: \(String(describing: item.error))")
@@ -160,7 +154,6 @@ public class ExecutaVideoAtividade: UIViewController {
             }
         }
 
-        // Notificação de término de vídeo para ir ao próximo da playlist
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
@@ -185,5 +178,16 @@ public class ExecutaVideoAtividade: UIViewController {
         player?.pause()
         player = nil
         dismiss(animated: true, completion: nil)
+    }
+}
+
+// Extension auxiliar para execução na Main Thread
+private extension DispatchQueue {
+    static func asyncOnMain(_ block: @escaping () -> Void) {
+        if Thread.isMainThread {
+            block()
+        } else {
+            DispatchQueue.main.async(execute: block)
+        }
     }
 }
