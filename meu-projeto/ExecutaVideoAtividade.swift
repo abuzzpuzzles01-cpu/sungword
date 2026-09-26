@@ -3,20 +3,21 @@ import AVFoundation
 
 public class ExecutaVideoAtividade: UIViewController {
 
-    // MARK: - Properties
+    // MARK: - Propriedades Públicas (Acessíveis pelo HomeAtividade)
     public var currentSong: Song?
     public var downloadUrl: String?
     public var currentIndex: Int = 0
     public var playlist: [Song] = []
     
+    // MARK: - Propriedades Privadas de Controle de Vídeo
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
     private var playerItemObserver: NSKeyValueObservation?
     
-    // Camada de degradê colorido para o fundo infantil
+    // Camada em degradê colorido para fundo infantil
     private let gradientLayer = CAGradientLayer()
     
-    // Container transparente onde o AVPlayerLayer é encaixado
+    // Container transparente onde o vídeo é encaixado
     private let videoContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -45,7 +46,7 @@ public class ExecutaVideoAtividade: UIViewController {
         super.loadView()
         let mainView = UIView(frame: UIScreen.main.bounds)
         
-        // Fundo infantil em degradê azul/amarelo
+        // Fundo infantil em degradê (azul / amarelo)
         gradientLayer.colors = [
             UIColor(red: 0.23, green: 0.73, blue: 0.95, alpha: 1.0).cgColor,
             UIColor(red: 1.00, green: 0.84, blue: 0.31, alpha: 1.0).cgColor
@@ -84,7 +85,7 @@ public class ExecutaVideoAtividade: UIViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // MARK: - UI Setup
+    // MARK: - Configuração da UI
     private func setupUI() {
         view.addSubview(videoContainerView)
         view.addSubview(closeButton)
@@ -104,13 +105,14 @@ public class ExecutaVideoAtividade: UIViewController {
         ])
     }
 
-    // MARK: - Video Execution
+    // MARK: - Execução do Vídeo
     private func iniciarVideo() {
+        // Configura sessão de áudio com AVFoundation
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("Aviso: Falha na AVAudioSession: \(error)")
+            print("Aviso: Falha ao configurar AVAudioSession: \(error)")
         }
 
         let songToPlay = currentSong ?? (!playlist.isEmpty && currentIndex < playlist.count ? playlist[currentIndex] : nil)
@@ -127,7 +129,7 @@ public class ExecutaVideoAtividade: UIViewController {
 
         print("🎬 Iniciando vídeo: \(videoURL.lastPathComponent)")
 
-        // Limpeza de player antigo
+        // Limpa instâncias anteriores
         player?.pause()
         playerItemObserver?.invalidate()
         playerItemObserver = nil
@@ -145,7 +147,7 @@ public class ExecutaVideoAtividade: UIViewController {
         videoContainerView.layer.addSublayer(layer)
         self.playerLayer = layer
 
-        // Observa o status para dar o play quando a mídia estiver pronta
+        // Observa status para iniciar a reprodução assim que pronto
         playerItemObserver = playerItem.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -158,6 +160,7 @@ public class ExecutaVideoAtividade: UIViewController {
             }
         }
 
+        // Notificação de término de vídeo para ir ao próximo da playlist
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(videoDidFinishPlaying),
