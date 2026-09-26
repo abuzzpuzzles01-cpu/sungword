@@ -8,6 +8,15 @@ public class HomeAtividade: UIViewController {
     
     private var homeAudioPlayer: AVAudioPlayer?
     
+    // Imagem de fundo
+    private let backgroundImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "background.png")
+        imageView.contentMode = .scaleAspectFill
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
@@ -18,8 +27,6 @@ public class HomeAtividade: UIViewController {
         cv.translatesAutoresizingMaskIntoConstraints = false
         return cv
     }()
-    
-    private let gradientLayer = CAGradientLayer()
 
     // MARK: - Lifecycle
     override public func viewDidLoad() {
@@ -42,21 +49,16 @@ public class HomeAtividade: UIViewController {
         pausarAudioHome()
     }
 
-    override public func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        gradientLayer.frame = view.bounds
-    }
-
     // MARK: - Setup
     private func setupBackground() {
-        gradientLayer.colors = [
-            UIColor(red: 0.23, green: 0.73, blue: 0.95, alpha: 1.0).cgColor,
-            UIColor(red: 1.00, green: 0.84, blue: 0.31, alpha: 1.0).cgColor
-        ]
-        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
-        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
-        gradientLayer.frame = view.bounds
-        view.layer.insertSublayer(gradientLayer, at: 0)
+        view.addSubview(backgroundImageView)
+        
+        NSLayoutConstraint.activate([
+            backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 
     private func setupCollectionView() {
@@ -75,7 +77,7 @@ public class HomeAtividade: UIViewController {
 
     // MARK: - Mapeamento de Músicas
     private func carregarPlaylistCompleta() {
-        let baseURL = "https://web.com/assets/tres_palavrinhas"
+        let baseURL = "https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas"
 
         self.playlist = [
             // --- DVD 1 ---
@@ -114,7 +116,7 @@ public class HomeAtividade: UIViewController {
             Song(id: "dvd2_toc_toc_toc", title: "Toc, Toc, Toc", urlVideo: "\(baseURL)/dvd2/video_dvd2_toc_toc_toc.mp4", isFreeContent: false),
             Song(id: "dvd2_trenzinho", title: "Trenzinho", urlVideo: "\(baseURL)/dvd2/video_dvd2_trenzinho.mp4", isFreeContent: false),
 
-            // --- DVD 3 (Mapeado para a pasta /tlw/) ---
+            // --- DVD 3 (Invertido: pasta /tlw/) ---
             Song(id: "dvd3_aleluia", title: "Aleluia", urlVideo: "\(baseURL)/tlw/video_dvd3_aleluia.mp4", isFreeContent: false),
             Song(id: "dvd3_churua", title: "Churuá", urlVideo: "\(baseURL)/tlw/video_dvd3_churua.mp4", isFreeContent: false),
             Song(id: "dvd3_e_feliz_o_lar", title: "É Feliz o Lar", urlVideo: "\(baseURL)/tlw/video_dvd3_e_feliz_o_lar.mp4", isFreeContent: false),
@@ -126,7 +128,7 @@ public class HomeAtividade: UIViewController {
             Song(id: "dvd3_meu_melhor_amigo", title: "Meu Melhor Amigo", fileName: "video_dvd3_meu_melhor_amigo.mp4", urlVideo: nil, isFreeContent: true),
             Song(id: "dvd3_por_dentro_fora_alto_embaixo", title: "Por Dentro, Fora, Alto, Embaixo", urlVideo: "\(baseURL)/tlw/video_dvd3_por_dentro_fora_alto_embaixo.mp4", isFreeContent: false),
 
-            // --- THE LITTLE WORDS (TLW) (Mapeado para a pasta /dvd3/) ---
+            // --- THE LITTLE WORDS (TLW) (Invertido: pasta /dvd3/) ---
             Song(id: "tlw_fatherabraham", title: "Father Abraham", urlVideo: "\(baseURL)/dvd3/video_tlw_fatherabraham.mp4", isFreeContent: false),
             Song(id: "tlw_god_made_the_fishes", title: "God Made the Fishes", urlVideo: "\(baseURL)/dvd3/video_tlw_god_made_the_fishes.mp4", isFreeContent: false),
             Song(id: "tlw_hello", title: "Hello", urlVideo: "\(baseURL)/dvd3/video_tlw_hello.mp4", isFreeContent: false),
