@@ -183,7 +183,7 @@ public class HomeAtividade: UIViewController {
         playerVC.currentSong = song
         playerVC.currentIndex = index
         playerVC.playlist = playlist
-        playerVC.modalPresentationStyle = .fullScreen
+        playerVC.modalPresentationStyle = UIModalPresentationStyle.fullScreen
         present(playerVC, animated: true)
     }
 }
