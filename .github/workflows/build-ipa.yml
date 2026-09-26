@@ -38,6 +38,7 @@ jobs:
             ${{ env.PROJECT_NAME }}/HomeAtividadeDelegate.swift \
             ${{ env.PROJECT_NAME }}/SobreAtividade.swift \
             ${{ env.PROJECT_NAME }}/Song.swift \
+            ${{ env.PROJECT_NAME }}/SongCell.swift \            
             ${{ env.PROJECT_NAME }}/LaunchScreenViewController.swift \
             ${{ env.PROJECT_NAME }}/ExecutaVideoAtividade.swift \
             ${{ env.PROJECT_NAME }}/InstitucionalAtividade.swift \
