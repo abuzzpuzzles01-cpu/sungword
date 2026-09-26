@@ -13,7 +13,7 @@ public class ExecutaVideoAtividade: UIViewController {
     private var playerLayer: AVPlayerLayer?
     private var playerItemObserver: NSKeyValueObservation?
     
-    // Camada de degradê colorido para o fundo
+    // Camada de degradê colorido para o fundo infantil
     private let gradientLayer = CAGradientLayer()
     
     // Container transparente onde o AVPlayerLayer é encaixado
@@ -26,7 +26,7 @@ public class ExecutaVideoAtividade: UIViewController {
         return view
     }()
     
-    // Botão de fechar (✕)
+    // Botão de fechar (✕) em estilo infantil
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("✕", for: .normal)
@@ -74,6 +74,14 @@ public class ExecutaVideoAtividade: UIViewController {
         if let layer = playerLayer {
             layer.frame = videoContainerView.bounds
         }
+    }
+
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        playerItemObserver?.invalidate()
+        playerItemObserver = nil
+        player?.pause()
+        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: - UI Setup
@@ -174,13 +182,5 @@ public class ExecutaVideoAtividade: UIViewController {
         player?.pause()
         player = nil
         dismiss(animated: true, completion: nil)
-    }
-
-    override public func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        playerItemObserver?.invalidate()
-        playerItemObserver = nil
-        player?.pause()
-        NotificationCenter.default.removeObserver(self)
     }
 }
