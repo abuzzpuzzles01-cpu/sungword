@@ -179,10 +179,12 @@ public class HomeAtividade: UIViewController {
     private func abrirPlayer(para song: Song, index: Int) {
         pausarAudioHome()
 
-let playerVC = ExecutaVideoAtividade() // <- LINHA DO ERRO DE ESCOPO 1
-playerVC.currentSong = song           // <- LINHA DO ERRO DE ESCOPO 2
-playerVC.currentIndex = index         // <- LINHA DO ERRO DE ESCOPO 3
-playerVC.playlist = playlist          // <- LINHA DO ERRO DE ESCOPO 4
+// Em HomeAtividade.swift
+let playerVC = ExecutaVideoAtividade()
+playerVC.currentSong = song
+playerVC.currentIndex = index
+playerVC.playlist = playlist
+
 playerVC.modalPresentationStyle = UIModalPresentationStyle.fullScreen
 present(playerVC, animated: true)
     }
