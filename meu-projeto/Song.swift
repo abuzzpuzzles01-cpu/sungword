@@ -7,6 +7,7 @@ public struct Song: Codable {
     public let urlVideo: String?        // URL completa do vídeo
     public let isFreeContent: Bool?
     
+    // URL Base atualizada do CDN
     private let baseURL = "https://newabuzzassets.b-cdn.net/assets/tres_palavrinhas"
     
     enum CodingKeys: String, CodingKey {
@@ -48,7 +49,7 @@ public struct Song: Codable {
         return "video_\(baseKey).png"
     }
 
-    // MARK: - Checagem Free / Paid (Usando a chave album_nome)
+    // MARK: - Checagem Free / Paid
     public func isFree() -> Bool {
         if let explicitFree = isFreeContent {
             return explicitFree
@@ -67,24 +68,25 @@ public struct Song: Codable {
     // MARK: - Resolução de URLs e Caminhos Locais
     public func getVideoURL() -> URL? {
         if isFree() {
-            let cleanName = "video_\(getBaseKey())"
-            return Bundle.main.url(forResource: cleanName, withExtension: "mp4")
+            // Busca o arquivo "video_album_nome.mp4" diretamente no Bundle
+            let videoName = getVideoFileName()
+            let nameWithoutExtension = (videoName as NSString).deletingPathExtension
+            
+            return Bundle.main.url(forResource: nameWithoutExtension, withExtension: "mp4")
         } else if isDownloaded() {
             return getLocalVideoMP4URL()
         }
         return nil
     }
 
-    /// URL Remota da CDN para download do vídeo .mp4
+    /// URL Remota para download dos vídeos pagos
     public func getDownloadURL() -> URL? {
         guard !isFree() else { return nil }
         
-        // Dá preferência ao urlVideo explicitado no modelo
         if let explicitURL = urlVideo, let url = URL(string: explicitURL) {
             return url
         }
         
-        // Fallback dinâmico caso a URL não venha informada no objeto
         return URL(string: "\(baseURL)/\(getVideoFileName())")
     }
 
