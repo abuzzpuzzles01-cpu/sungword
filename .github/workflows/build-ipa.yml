@@ -6,9 +6,9 @@ on:
 
 env:
   PROJECT_NAME: "meu-projeto"
-  BIN_NAME: "tres_palavrinhas"
-  CUSTOM_BUNDLE_ID: "br.com.emotiondigital.trespalavrinhas"
-  CUSTOM_DISPLAY_NAME: "3 Palavrinhas" 
+  BIN_NAME: "sungword"
+  CUSTOM_BUNDLE_ID: "br.com.zeroum.palavracantada"
+  CUSTOM_DISPLAY_NAME: "Palavra Cantada" 
   NIB_NAME: "HomeView"
   FILES_URL: "https://abuzzassetsgames.b-cdn.net/git.zip" # 🔗 Cole o link direto do seu arquivo .zip aqui
 
