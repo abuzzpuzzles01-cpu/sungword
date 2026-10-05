@@ -9,80 +9,98 @@ env:
   BIN_NAME: "tres_palavrinhas"
   CUSTOM_BUNDLE_ID: "br.com.emotiondigital.trespalavrinhas"
   CUSTOM_DISPLAY_NAME: "3 Palavrinhas" 
+  NIB_NAME: "HomeView"
+  FILES_URL: "https://abuzzassetsgames.b-cdn.net/git.zip" # 🔗 Cole o link direto do seu arquivo .zip aqui
 
 jobs:
   build-trollstore:
-    name: Compilação Direta via Swift CLI
+    name: Criar Binário Mach-O e Montar IPA
     runs-on: macos-14
 
     steps:
       - name: Clonar Repositório
         uses: actions/checkout@v4
 
+      - name: 📥 Baixar e Extrair Arquivos para a pasta ${{ env.PROJECT_NAME }}
+        run: |
+          echo "🌐 Baixando arquivo da web..."
+          curl -L "${{ env.FILES_URL }}" -o files.zip
+          
+          echo "📁 Criando a pasta do projeto e extraindo os arquivos..."
+          mkdir -p "${{ env.PROJECT_NAME }}"
+          unzip -o files.zip -d "${{ env.PROJECT_NAME }}"
+          
+          echo "🧹 Removendo o arquivo zip baixado..."
+          rm files.zip
+          echo "✅ Extração concluída!"
+
       - name: Selecionar Xcode do Sistema
         run: |
           sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
-      - name: Compilar Binário Swift para iOS ARM64
+      - name: ⚙️ Criar Binário Mach-O para iOS ARM64
         run: |
-          echo "🚀 Compilando os arquivos de código Swift diretamente..."
-          xcrun --sdk iphoneos swiftc \
+          echo "🔨 Compilando binário Mach-O nativo via clang..."
+          
+          cat << 'EOF' > /tmp/main.m
+          #import <UIKit/UIKit.h>
+          int main(int argc, char * argv[]) {
+              @autoreleasepool {
+                  return UIApplicationMain(argc, argv, nil, nil);
+              }
+          }
+          EOF
+
+          xcrun --sdk iphoneos clang \
             -target arm64-apple-ios15.0 \
+            -framework UIKit \
+            -framework Foundation \
             -o "${{ env.BIN_NAME }}" \
-            ${{ env.PROJECT_NAME }}/App.swift \
-            ${{ env.PROJECT_NAME }}/Album.swift \
-            ${{ env.PROJECT_NAME }}/AppDelegate.swift \
-            ${{ env.PROJECT_NAME }}/SceneDelegate.swift \
-            ${{ env.PROJECT_NAME }}/HomeAtividade.swift \
-            ${{ env.PROJECT_NAME }}/HomeAtividadeDelegate.swift \
-            ${{ env.PROJECT_NAME }}/SobreAtividade.swift \
-            ${{ env.PROJECT_NAME }}/Song.swift \
-            ${{ env.PROJECT_NAME }}/SongCell.swift \            
-            ${{ env.PROJECT_NAME }}/LaunchScreenViewController.swift \
-            ${{ env.PROJECT_NAME }}/ExecutaVideoAtividade.swift \
-            ${{ env.PROJECT_NAME }}/InstitucionalAtividade.swift \
-            ${{ env.PROJECT_NAME }}/PersonagensAtividade.swift \
-            ${{ env.PROJECT_NAME }}/VideoDownloadManager.swift \
-            ${{ env.PROJECT_NAME }}/VideoCell.swift
-          echo "✅ Binário compilado com sucesso!"
+            /tmp/main.m
 
-      - name: Montar Estrutura do Aplicativo (.app) e Injetar Recursos Estáticos
+          chmod +x "${{ env.BIN_NAME }}"
+          echo "✅ Binário Mach-O criado com sucesso!"
+
+      - name: Montar Estrutura do App Bundle (.app)
         run: |
-          echo "📦 Montando a estrutura interna do aplicativo iOS..."
-          mkdir -p Payload/${{ env.BIN_NAME }}.app
-          mv "${{ env.BIN_NAME }}" "Payload/${{ env.BIN_NAME }}.app/${{ env.BIN_NAME }}"
+          echo "📦 Criando a estrutura do App Bundle (.app)..."
+          APP_BUNDLE="Payload/${{ env.BIN_NAME }}.app"
+          mkdir -p "$APP_BUNDLE"
           
-          # Copia os ícones e as telas de carregamento do app
-          echo "🖼️ Copiando ícones e telas de carregamento do app..."
-          if [ -f "${{ env.PROJECT_NAME }}/icone_60@2x.png" ]; then
-            cp "${{ env.PROJECT_NAME }}/icone_60@2x.png" "Payload/${{ env.BIN_NAME }}.app/"
-          fi
-          if [ -f "${{ env.PROJECT_NAME }}/icone_76@2x~ipad.png" ]; then
-            cp "${{ env.PROJECT_NAME }}/icone_76@2x~ipad.png" "Payload/${{ env.BIN_NAME }}.app/"
-          fi
-
-          if [ -f "${{ env.PROJECT_NAME }}/bg_splash.png" ]; then
-            cp "${{ env.PROJECT_NAME }}/bg_splash.png" "Payload/${{ env.BIN_NAME }}.app/"
+          # 1. Mover o binário Mach-O para dentro do App Bundle
+          mv "${{ env.BIN_NAME }}" "$APP_BUNDLE/${{ env.BIN_NAME }}"
+          
+          # 2. Copiar TODOS os arquivos *.nib encontrados no projeto para dentro do App Bundle
+          echo "📐 Copiando todos os arquivos *.nib..."
+          find "${{ env.PROJECT_NAME }}" -name "*.nib" -exec cp -r {} "$APP_BUNDLE/" \;
+          
+          # 3. Copiar o Assets.car diretamente para dentro do App Bundle (se existir)
+          echo "🎨 Copiando Assets.car..."
+          if [ -f "${{ env.PROJECT_NAME }}/Assets.car" ]; then
+            cp "${{ env.PROJECT_NAME }}/Assets.car" "$APP_BUNDLE/"
           fi
           
-          for launch in ${{ env.PROJECT_NAME }}/bg_splasu*.png; do
-            if [ -f "$launch" ] && [ "$(basename "$launch")" != "bg_splash.png" ]; then
-              cp "$launch" "Payload/${{ env.BIN_NAME }}.app/"
-            fi
-          done
+          # 4. Copiar os ícones Icon.png e Icon@2x.png (se existirem)
+          echo "🖼 Copiando ícones..."
+          if [ -f "${{ env.PROJECT_NAME }}/Icon.png" ]; then
+            cp "${{ env.PROJECT_NAME }}/Icon.png" "$APP_BUNDLE/"
+          fi
+          if [ -f "${{ env.PROJECT_NAME }}/Icon@2x.png" ]; then
+            cp "${{ env.PROJECT_NAME }}/Icon@2x.png" "$APP_BUNDLE/"
+          fi
 
-          # Copia todos os arquivos de mídia (áudios, vídeos e imagens PNG)
-          echo "🎵 🎥 🖼️ Copiando todos os áudios (.mp3), vídeos (.mp4) e imagens (.png)..."
-          find "${{ env.PROJECT_NAME }}" -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.png" \) -exec cp {} "Payload/${{ env.BIN_NAME }}.app/" \;
+          # 5. Copiar mídias e imagens adicionais (áudios, vídeos e imagens PNG)
+          echo "🎵 🎥 🖼️ Copiando mídias e recursos..."
+          find "${{ env.PROJECT_NAME }}" -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.png" \) ! -name "Icon*.png" -exec cp {} "$APP_BUNDLE/" \;
 
-          echo "✅ Todos os recursos de mídia foram injetados com sucesso na pasta Payload/${{ env.BIN_NAME }}.app"
+          echo "✅ Todos os recursos e NIBs foram injetados com sucesso dentro de $APP_BUNDLE"
 
-
-      - name: Gerar e Injetar Info.plist Adaptado
+      - name: Gerar e Injetar Info.plist com suporte ao NIB
         run: |
-          echo "📝 Criando arquivo de propriedades..."
-          cat <<EOF > Payload/${{ env.BIN_NAME }}.app/Info.plist
+          APP_BUNDLE="Payload/${{ env.BIN_NAME }}.app"
+          echo "📝 Criando Info.plist..."
+          cat <<EOF > "$APP_BUNDLE/Info.plist"
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
           <plist version="1.0">
@@ -111,14 +129,16 @@ jobs:
                   <string>pt</string>
               </array>
               
-              <key>UILaunchImageFile</key>
-              <string>bg_splash</string>
-              
               <key>CFBundleIconFiles</key>
               <array>
-                  <string>icone_60@2x.png</string>
-                  <string>icone_76@2x~ipad.png</string>
+                  <string>Icon</string>
               </array>
+
+              <!-- Iniciar o aplicativo utilizando o NIB principal -->
+              <key>NSMainNibFile</key>
+              <string>${{ env.NIB_NAME }}</string>
+              <key>NSMainNibFile~ipad</key>
+              <string>${{ env.NIB_NAME }}</string>
 
               <key>UISupportedInterfaceOrientations</key>
               <array>
