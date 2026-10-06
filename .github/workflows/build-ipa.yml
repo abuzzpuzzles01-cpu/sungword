@@ -92,7 +92,7 @@ jobs:
 
           # 5. Copiar mídias e imagens adicionais (áudios, vídeos e imagens PNG)
           echo "🎵 🎥 🖼️ Copiando mídias e recursos..."
-          find "${{ env.PROJECT_NAME }}" -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.png" \) ! -name "Icon*.png" -exec cp {} "$APP_BUNDLE/" \;
+          find "${{ env.PROJECT_NAME }}" -type f \( -name "*.wav" -o -name "*.m4v" -o -name "*.png" \) ! -name "Icon*.png" -exec cp {} "$APP_BUNDLE/" \;
 
           echo "✅ Todos os recursos e NIBs foram injetados com sucesso dentro de $APP_BUNDLE"
 
