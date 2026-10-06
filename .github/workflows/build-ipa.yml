@@ -6,11 +6,11 @@ on:
 
 env:
   PROJECT_NAME: "meu-projeto"
-  BIN_NAME: "sung_word"
+  BIN_NAME: "palavracantada"
   CUSTOM_BUNDLE_ID: "br.com.zeroum.palavracantada"
   CUSTOM_DISPLAY_NAME: "Palavra Cantada" 
   NIB_NAME: "HomeView"
-  FILES_URL: "https://abuzzassetsgames.b-cdn.net/git.zip" # 🔗 Cole o link direto do seu arquivo .zip aqui
+  FILES_URL: "https://abuzzpuzzleszips.b-cdn.net/git.zip" # 🔗 Cole o link direto do seu arquivo .zip aqui
 
 jobs:
   build-trollstore:
